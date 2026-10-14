@@ -93,10 +93,18 @@ WHERE s.kind IN ['pr', 'issue', 'discussion', 'doc']
   AND ($repo IS NULL OR s.repo = $repo)
   AND NOT (s.kind = 'pr' AND s.state = 'closed')
 OPTIONAL MATCH (c:Source)-[:REPLY_TO]->(s)
-WITH s, count(c) AS replies, size(coalesce(s.body, '')) AS body_len
+WITH s, count(c) AS replies, size(coalesce(s.body, '')) AS body_len, toLower(coalesce(s.body, '')) AS b
 WHERE s.kind = 'doc' OR body_len >= 300 OR replies >= 2
-RETURN s.uid AS uid, replies, body_len
-ORDER BY CASE s.kind WHEN 'doc' THEN 0 ELSE 1 END, replies * 400 + body_len DESC
+// Decisions live where people argue: rank threads by rationale language so scarce LLM calls go where they pay off.
+WITH s, replies, body_len,
+     CASE WHEN b CONTAINS 'rather than' THEN 3 ELSE 0 END + CASE WHEN b CONTAINS 'instead of' THEN 2 ELSE 0 END +
+     CASE WHEN b CONTAINS 'because' THEN 2 ELSE 0 END + CASE WHEN b CONTAINS 'trade-off' OR b CONTAINS 'tradeoff' THEN 3 ELSE 0 END +
+     CASE WHEN b CONTAINS '## why' OR b CONTAINS 'motivation' OR b CONTAINS 'rationale' THEN 3 ELSE 0 END +
+     CASE WHEN b CONTAINS 'we decided' OR b CONTAINS 'we chose' OR b CONTAINS 'decision' THEN 2 ELSE 0 END +
+     CASE WHEN b CONTAINS 'alternative' OR b CONTAINS 'considered' THEN 2 ELSE 0 END +
+     CASE WHEN s.state = 'merged' THEN 1 ELSE 0 END AS signal
+RETURN s.uid AS uid, replies, body_len, signal
+ORDER BY signal DESC, replies * 400 + body_len DESC
 LIMIT $limit
 """
 
