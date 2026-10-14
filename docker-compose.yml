@@ -1,0 +1,53 @@
+name: cairn
+
+services:
+  falkordb:
+    # Pinned by digest so the demo graph behaves the same everywhere (FalkorDB graph module 6.0.2).
+    image: falkordb/falkordb@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6
+    environment:
+      # The stock image caps queries at 1s; graph algorithms and batched writes need more.
+      FALKORDB_ARGS: "MAX_QUEUED_QUERIES 50 TIMEOUT_MAX 120000 TIMEOUT_DEFAULT 30000 RESULTSET_SIZE 20000"
+    ports:
+      - "6379:6379"   # Redis protocol
+      - "3000:3000"   # FalkorDB Browser
+    volumes:
+      - falkordb-data:/var/lib/falkordb/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      CAIRN_FALKORDB_HOST: falkordb
+      CAIRN_FALKORDB_PORT: "6379"
+      CAIRN_DATA_DIR: /app/data
+      CAIRN_CORS_ORIGINS: "http://localhost:5173,http://localhost:8080"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: ./web
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  falkordb-data:
