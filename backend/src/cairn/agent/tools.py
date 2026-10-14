@@ -210,8 +210,12 @@ class Tools:
             "CALL db.idx.fulltext.queryNodes('Decision', $q) YIELD node, score "
             "RETURN node.uid AS uid, node.title AS title, node.repo AS repo, node.ts AS ts, node.url AS url, score "
             "ORDER BY score DESC LIMIT $k",
-            {"q": q, "k": limit},
+            {"q": q, "k": limit * 2},
         )
+        # Same topic-coverage ranking as why(): loosely matching decisions shouldn't outrank the right one.
+        relevant = self._relevant_decisions(query, [d["uid"] for d in decisions])
+        by_uid = {d["uid"]: d for d in decisions}
+        decisions = [by_uid[u] for u in relevant][:limit]
         for d in decisions:
             sg.node("Decision", d["uid"], title=d["title"], ts=d["ts"])
         out["decisions"] = [{**d, "date": fmt_date(d.pop("ts"))} for d in decisions]

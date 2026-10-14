@@ -47,6 +47,8 @@ How to work:
   `who_knows` for expertise, `impact` for "what breaks / depends on", `bus_factor` and `person_profile` for risk,
   `timeline` for "what changed / as of", `connect` for "how is X related to Y", `drift_report` for stale decisions.
 - If a tool says no system/person matches, call `list_systems` or `search` and retry with a valid name.
+- When the user names an area inside a repo (e.g. "GraphRAG-SDK ingestion", "QueryWeaver API routes"), pass that module
+  to the tool (e.g. "graphrag_sdk/ingestion", "api/routes"), not just the repo.
 - Items in tool results carry a citation number `ref`. Cite every factual claim with it in square brackets, e.g.
   "… was chosen for speed [3]." Use only integer refs you were given. Never invent PR numbers, people, dates or quotes.
 - For "why" questions, give each premise (reason) behind the decision, quote its key phrase briefly, and cite its ref.
@@ -170,6 +172,7 @@ class Agent:
         self.settings = settings
         self.tools = Tools(store)
         self.actions = ActionService(store, settings)
+        self.persist_answers = True  # evaluation runs turn this off so test questions don't fill the audit trail
 
     async def run(self, question: str, history: list[dict[str, str]] | None = None, *, use_llm: bool = True) -> AsyncIterator[dict[str, Any]]:
         question = question.strip()
@@ -198,8 +201,24 @@ class Agent:
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": SYSTEM_PROMPT.format(repos=", ".join(self.settings.repos))},
             *history[-6:],
-            {"role": "user", "content": question},
         ]
+        # Retrieval first: run the tool the deterministic router would pick, so the model starts from the right
+        # evidence instead of hunting for it (LLMs are inconsistent about which tool to open first).
+        prefetched = []
+        plan = await asyncio.to_thread(route, self.tools, question, self.settings.action_repos)
+        for i, (name, args) in enumerate(plan.calls[:1]):
+            if name in ACTION_NAMES or name == "search":
+                continue
+            call_id = f"prefetch_{i}"
+            yield {"type": "tool_call", "id": call_id, "name": name, "args": args}
+            event, content, fetched = await self._run_tool(call_id, name, args, ledger, used)
+            yield event
+            if fetched is not None:
+                prefetched.append(f"Result of `{name}({json.dumps(args, ensure_ascii=False)})`:\n{content}")
+        user = question
+        if prefetched:
+            user += "\n\nGraph context already retrieved for you (cite its refs; call more tools only if it's not enough):\n\n" + "\n\n".join(prefetched)
+        messages.append({"role": "user", "content": user})
         for step in range(self.settings.agent_max_steps):
             final_step = step == self.settings.agent_max_steps - 1
             result = await self.llm.chat("agent", messages, tools=None if final_step else TOOL_SPECS + ACTION_SPECS, use_cache=False)
@@ -280,7 +299,8 @@ class Agent:
         cleaned, citations = clean_citations(text, ledger)
         answer_uid = f"answer-{uuid.uuid4().hex[:12]}"
         try:
-            await asyncio.to_thread(self._persist, answer_uid, question, cleaned, used)
+            if self.persist_answers:
+                await asyncio.to_thread(self._persist, answer_uid, question, cleaned, used)
         except Exception as exc:  # noqa: BLE001 - the audit trail must never block an answer
             log.warning("could not persist answer: %s", exc)
         return {"type": "answer", "text": cleaned, "citations": citations, "answer_uid": answer_uid, "mode": mode}

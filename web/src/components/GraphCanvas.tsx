@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d'
 import { linkEnds, type FGLink, type FGNode, type GraphData } from '../graph/useGraph'
 import { LEGEND, nodeCaption, nodeColor, nodeRadius, nodeTitle } from '../graph/style'
@@ -39,12 +39,16 @@ export function GraphCanvas({ data, highlight, selected, onSelect }: Props) {
     link?.distance?.((l: FGLink) => (l.type === 'PART_OF' ? 26 : l.type === 'KNOWS_ABOUT' ? 70 : 45))
   }, [])
 
-  // When a new reasoning path lights up, frame it.
+  // When a new reasoning path lights up, frame it. New nodes start wherever the simulation drops them, so
+  // frame once early (feedback) and again when the layout settles (onEngineStop), when positions are final.
+  const pendingFit = useRef(false)
+  const fit = useCallback(() => fg.current?.zoomToFit(600, 70, (n: FGNode) => highlight.has(n.id)), [highlight])
   useEffect(() => {
     if (highlight.size === 0) return
-    const t = setTimeout(() => fg.current?.zoomToFit(700, 60, (n: FGNode) => highlight.has(n.id)), 450)
+    pendingFit.current = true
+    const t = setTimeout(fit, 450)
     return () => clearTimeout(t)
-  }, [highlight])
+  }, [highlight, fit])
 
   const hl = highlight.size > 0
   const neighbors = useMemo(() => {
@@ -67,6 +71,12 @@ export function GraphCanvas({ data, highlight, selected, onSelect }: Props) {
         graphData={data}
         backgroundColor="rgba(0,0,0,0)"
         cooldownTicks={120}
+        onEngineStop={() => {
+          if (pendingFit.current) {
+            pendingFit.current = false
+            fit()
+          }
+        }}
         nodeId="id"
         nodeLabel={(n) => `${n.label}: ${nodeTitle(n)}`}
         onNodeClick={(n) => onSelect(n.id)}
@@ -115,7 +125,10 @@ export function GraphCanvas({ data, highlight, selected, onSelect }: Props) {
             ctx.strokeStyle = '#0b1020'
             ctx.stroke()
           }
-          const showLabel = focus || (hl && highlight.has(node.id)) || (node.label === 'System' && node.props.kind === 'repo') || scale > 2.2
+          // Label every lit node only when few are lit; otherwise just the anchors (decisions, people, repos), or when zoomed in.
+          const anchor = node.label === 'Decision' || node.label === 'Person' || (node.label === 'System' && node.props.kind === 'repo')
+          const lit = hl && highlight.has(node.id) && (highlight.size <= 24 || anchor)
+          const showLabel = focus || lit || (!hl && node.label === 'System' && node.props.kind === 'repo') || scale > 2.6
           if (showLabel) {
             const fontSize = Math.max(10 / scale, 2.4)
             ctx.font = `${focus ? 600 : 500} ${fontSize}px Inter, ui-sans-serif, system-ui`

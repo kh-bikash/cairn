@@ -26,14 +26,36 @@ export default function App() {
   const { merge, reset, setHighlight } = graph
 
   useEffect(() => {
-    api.health().then(setHealth).catch((e: Error) => setHealthErr(e.message))
-    api
-      .overview()
-      .then((sg) => {
-        setOverview(sg)
-        reset(sg)
-      })
-      .catch((e: Error) => setHealthErr(e.message))
+    // Poll health: retry quickly while the API is down (e.g. its container restarting), then every 30s.
+    // The overview graph loads on the first successful check, so a page opened during a restart recovers by itself.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let loaded = false
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const h = await api.health()
+        if (cancelled) return
+        setHealth(h)
+        setHealthErr(null)
+        if (!loaded) {
+          const sg = await api.overview()
+          if (cancelled) return
+          loaded = true
+          setOverview(sg)
+          reset(sg)
+        }
+        timer = setTimeout(poll, 30_000)
+      } catch (e) {
+        if (cancelled) return
+        setHealthErr((e as Error).message)
+        timer = setTimeout(poll, 3_000)
+      }
+    }
+    void poll()
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [reset])
 
   const update = useCallback((id: string, fn: (t: Turn) => Turn) => setTurns((ts) => ts.map((t) => (t.id === id ? fn(t) : t))), [])
@@ -62,10 +84,13 @@ export default function App() {
             update(id, (t) => ({ ...t, steps: [...t.steps, { id: e.id, name: e.name, args: e.args, nodeIds: [] }] }))
             break
           case 'tool_result': {
-            merge(e.subgraph)
-            const ids = e.subgraph.nodes.map((n) => n.id)
-            ids.forEach((n) => lit.add(n))
-            setHighlight(new Set(lit))
+            // Search hits are unconnected; drawing them scatters the canvas. They still reach the evidence panel.
+            const ids = e.name === 'search' ? [] : e.subgraph.nodes.map((n) => n.id)
+            if (ids.length) {
+              merge(e.subgraph)
+              ids.forEach((n) => lit.add(n))
+              setHighlight(new Set(lit))
+            }
             update(id, (t) => ({
               ...t,
               steps: t.steps.map((s) => (s.id === e.id ? { ...s, summary: e.summary, error: e.error, nodeIds: ids, action: e.action } : s)),
@@ -152,7 +177,7 @@ export default function App() {
                 className={`whitespace-nowrap rounded-full px-2 py-0.5 ${agentReady ? 'bg-emerald-400/15 text-emerald-300' : 'bg-amber-400/15 text-amber-300'}`}
                 title={agentReady ? health.llm.agent.model : 'No agent LLM key: answers come from deterministic graph routing'}
               >
-                {agentReady ? `agent · ${health.llm.agent.model.split(':')[1]}` : 'graph-only mode'}
+                {agentReady ? `agent · ${health.llm.agent.model.split(',')[0].split(':')[1]}` : 'graph-only mode'}
               </span>
             </>
           )}

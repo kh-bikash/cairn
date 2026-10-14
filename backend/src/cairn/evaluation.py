@@ -140,6 +140,7 @@ async def agent_answer(agent: Agent, question: str, *, use_llm: bool) -> tuple[s
 
 async def run_eval(store: GraphStore, llm: LLM, settings: Settings, questions: list[Question], systems: list[str]) -> list[Score]:
     agent = Agent(store, llm, settings)
+    agent.persist_answers = False
     scores: list[Score] = []
     for q in questions:
         for system in systems:

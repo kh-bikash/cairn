@@ -166,7 +166,7 @@ function TurnView({ turn, onCite, onStep }: { turn: Turn; onCite: (c: Citation) 
       {turn.answer && <Answer text={turn.answer.text} citations={turn.answer.citations} onCite={onCite} />}
       {turn.answer && (
         <p className="text-[11px] text-slate-500">
-          {turn.answer.mode === 'router' ? 'Answered directly from the graph (no LLM)' : 'Agent answer'} · {turn.answer.citations.length} sources
+          {turn.answer.mode === 'router' ? 'Answered directly from the graph (no LLM)' : 'Agent answer'} · {turn.answer.citations.length} source{turn.answer.citations.length === 1 ? '' : 's'}
           {turn.seconds != null && ` · ${turn.seconds.toFixed(1)}s`}
         </p>
       )}
