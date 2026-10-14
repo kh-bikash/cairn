@@ -565,8 +565,7 @@ class Tools:
         activity = {
             r["key"]: r["n"]
             for r in self.store.records(
-                f"MATCH (x:Source)-[:{_SYSTEM_LINKS}]->(s:System) WHERE s.key IN $keys AND NOT (x)-[:REPLY_TO]->() "
-                "RETURN s.key AS key, count(DISTINCT x) AS n",
+                f"MATCH (x:Source)-[:{_SYSTEM_LINKS}]->(s:System) WHERE s.key IN $keys AND NOT (x)-[:REPLY_TO]->() RETURN s.key AS key, count(DISTINCT x) AS n",
                 {"keys": list(by_sys)},
             )
         }
@@ -591,7 +590,9 @@ class Tools:
             for p in people:
                 if p["left"] and p["lifetime"] / lifetime_total >= 0.2:
                     entry = departed.setdefault(p["handle"], {"handle": p["handle"], "left_company": fmt_date(p["left"]), "systems": []})
-                    entry["systems"].append({"system": key, "all_time_share": round(p["lifetime"] / lifetime_total, 2), "now_held_by": current[0]["handle"] if current else None})
+                    entry["systems"].append(
+                        {"system": key, "all_time_share": round(p["lifetime"] / lifetime_total, 2), "now_held_by": current[0]["handle"] if current else None}
+                    )
             # Risk = the top expert has left, or knowledge sits with exactly one current person. Knowledge spread
             # thinly across many people (no one above 20%) is diffuse ownership, reported separately.
             if not significant and not expert_left:

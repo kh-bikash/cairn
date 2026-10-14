@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -23,6 +24,8 @@ from cairn.config import Settings, get_settings
 from cairn.graph.client import GraphStore, SubGraph
 from cairn.llm.client import LLM
 from cairn.sync import SyncError, SyncManager, snapshot_repos
+from cairn.workspaces import describe, is_workspace_graph
+from cairn.workspaces import graph_names as workspace_graphs
 
 log = logging.getLogger(__name__)
 
@@ -51,24 +54,52 @@ class WikiRequest(BaseModel):
     reason: str = Field(default="Refresh the knowledge base from the graph", max_length=500)
 
 
+class Workspace:
+    """Everything bound to one workspace graph. Shared pieces (settings, LLM, rate limiter) come from State."""
+
+    def __init__(self, state: State, graph: str) -> None:
+        self.settings = state.settings
+        self.llm = state.llm
+        self.ask_limiter = state.ask_limiter
+        self.graph = graph
+        self.store = GraphStore(state.settings, graph_name=graph)
+        self.agent = Agent(self.store, self.llm, state.settings)
+        self.tools = Tools(self.store)
+        self.actions = ActionService(self.store, state.settings)
+        self.sync = SyncManager(self.store, self.llm, state.settings)
+
+
 class State:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.store = GraphStore(settings)
         self.llm = LLM(settings)
-        self.agent = Agent(self.store, self.llm, settings)
-        self.tools = Tools(self.store)
-        self.actions = ActionService(self.store, settings)
-        self.sync = SyncManager(self.store, self.llm, settings)
         self.ask_limiter = RateLimiter(settings.ask_rate_limit_per_minute, 60.0)
+        self._workspaces: dict[str, Workspace] = {}
+        self._known: tuple[float, list[str]] = (0.0, [])
+        self.default = self.workspace(settings.graph_name)
+
+    def graphs(self) -> list[str]:
+        stamp, cached = self._known
+        if time.monotonic() - stamp > 30 or not cached:
+            try:
+                cached = workspace_graphs(self.settings) or [self.settings.graph_name]
+            except Exception:  # noqa: BLE001 - FalkorDB down: fall back to the default graph
+                cached = [self.settings.graph_name]
+            self._known = (time.monotonic(), cached)
+        return cached
+
+    def workspace(self, graph: str) -> Workspace:
+        if graph not in self._workspaces:
+            self._workspaces[graph] = Workspace(self, graph)
+        return self._workspaces[graph]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     state = State(settings)
-    if state.store.ping():
-        await asyncio.to_thread(state.store.ensure_schema)
+    if state.default.store.ping():
+        await asyncio.to_thread(state.default.store.ensure_schema)
     else:
         log.error("FalkorDB is not reachable at %s:%s", settings.falkordb_host, settings.falkordb_port)
     app.state.cairn = state
@@ -83,10 +114,23 @@ def create_app() -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
+        expose_headers=["Retry-After"],
     )
 
-    def st(request: Request) -> State:
-        return request.app.state.cairn  # type: ignore[no-any-return]
+    def st(request: Request) -> Workspace:
+        """The workspace this request is about: `X-Cairn-Workspace` header or `ws` query param, default graph otherwise."""
+        state: State = request.app.state.cairn
+        graph = request.headers.get("x-cairn-workspace") or request.query_params.get("ws") or state.settings.graph_name
+        if graph != state.settings.graph_name and (not is_workspace_graph(state.settings, graph) or graph not in state.graphs()):
+            raise HTTPException(404, f"unknown workspace {graph!r}")
+        return state.workspace(graph)
+
+    @app.get("/api/workspaces")
+    async def workspaces(request: Request) -> dict[str, Any]:
+        state: State = request.app.state.cairn
+        graphs = await asyncio.to_thread(state.graphs)
+        items = [await asyncio.to_thread(describe, state.workspace(g).store) for g in graphs]
+        return {"items": items, "default": state.settings.graph_name}
 
     @app.get("/api/health")
     async def health(request: Request) -> dict[str, Any]:
@@ -294,8 +338,11 @@ def create_app() -> FastAPI:
 
     @app.post("/api/sync", dependencies=[Depends(require_admin)])
     async def sync_start(body: SyncRequest, request: Request) -> dict[str, Any]:
+        ws = st(request)
+        if ws.graph != ws.settings.graph_name:
+            raise HTTPException(422, "GitHub sync runs in the GitHub workspace; import company exports with `cairn workspace import`.")
         try:
-            job = st(request).sync.start(body.repos)
+            job = ws.sync.start(body.repos)
         except SyncError as exc:
             raise HTTPException(422, str(exc)) from exc
         return {"job": job.public()}

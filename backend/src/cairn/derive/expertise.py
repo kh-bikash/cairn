@@ -132,7 +132,14 @@ def derive_expertise(store: GraphStore, *, min_score: float = 0.05) -> int:
     tallies = score_activities(activities, repo_activity, module_repo, now)
 
     rows: list[dict[str, Any]] = [
-        {"handle": h, "key": k, "score": round(t.score, 4), "lifetime": round(t.lifetime, 4), "last_ts": t.last_ts, **{kind: t.counts.get(kind, 0) for kind in KINDS}}
+        {
+            "handle": h,
+            "key": k,
+            "score": round(t.score, 4),
+            "lifetime": round(t.lifetime, 4),
+            "last_ts": t.last_ts,
+            **{kind: t.counts.get(kind, 0) for kind in KINDS},
+        }
         for (h, k), t in tallies.items()
         if t.score >= min_score
     ]

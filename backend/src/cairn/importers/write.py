@@ -76,9 +76,7 @@ def _write_decisions(store: GraphStore, ws: Workspace) -> int:
                 "MATCH (d:Decision {uid: $uid}) UNWIND $h AS h MATCH (p:Person {handle: h}) MERGE (p)-[:DECIDED]->(d)", {"uid": d["uid"], "h": d["deciders"]}
             )
         if d["systems"]:
-            store.query(
-                "MATCH (d:Decision {uid: $uid}) UNWIND $k AS k MATCH (s:System {key: k}) MERGE (d)-[:AFFECTS]->(s)", {"uid": d["uid"], "k": d["systems"]}
-            )
+            store.query("MATCH (d:Decision {uid: $uid}) UNWIND $k AS k MATCH (s:System {key: k}) MERGE (d)-[:AFFECTS]->(s)", {"uid": d["uid"], "k": d["systems"]})
         rows = [{"uid": f"{d['uid']}::p{i + 1}", "text": p, "rel": "BECAUSE", "option": None} for i, p in enumerate(d["premises"])]
         rows += [{"uid": f"{d['uid']}::r{i + 1}", "text": r["text"], "rel": "REJECTED", "option": r["option"]} for i, r in enumerate(d["rejected"])]
         for rel in ("BECAUSE", "REJECTED"):
