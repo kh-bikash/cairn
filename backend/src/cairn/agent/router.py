@@ -110,7 +110,13 @@ def find_people(tools: Tools, question: str) -> list[str]:
     return out
 
 
+_LEADING_WHY = re.compile(r"^\s*(why|how come|what was the (reason|rationale))\b", re.I)
+
+
 def intent_of(question: str) -> str:
+    # "Why did we bound our dependencies?" is about rationale even though it mentions dependencies.
+    if _LEADING_WHY.search(question):
+        return "why"
     for name, pattern in _INTENTS:
         if pattern.search(question):
             return name

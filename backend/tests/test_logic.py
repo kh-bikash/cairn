@@ -153,6 +153,8 @@ def test_tool_payload_stays_valid_json_under_cap() -> None:
         ("Which decisions are outdated?", "drift"),
         ("What changed in billing since June?", "timeline"),
         ("redis", "search"),
+        ("Why did we bound our dependencies to tested versions?", "why"),
+        ("How come the release depends on hiredis?", "why"),
     ],
 )
 def test_intent_router(question: str, intent: str) -> None:

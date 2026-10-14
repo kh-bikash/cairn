@@ -264,14 +264,32 @@ class Tools:
             return ToolResult({"decisions": decisions}, f"{len(decisions)} decisions on '{topic}'", sg, evidence)
 
         # No extracted decision: fall back to the raw threads so the agent can still reason from sources.
-        fallback = self.search(topic, limit=5)
+        fallback = self.search(topic, limit=15)
+        sources = self._rerank_by_topic(topic, fallback.data.get("sources", []))[:5]
+        keep = {s["uid"] for s in sources}
+        fallback.evidence = [e for e in fallback.evidence if e.uid in keep]
         fallback.data = {
             "decisions": [],
             "note": "No extracted decision matches; these raw threads may contain the rationale.",
-            "sources": fallback.data.get("sources", []),
+            "sources": sources,
         }
         fallback.summary = f"no decisions on '{topic}', {len(fallback.data['sources'])} raw threads"
         return fallback
+
+    def _rerank_by_topic(self, topic: str, sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Order raw threads by how many distinct topic words their title and body contain."""
+        terms = {_stem(w) for w in _words(topic) if w not in _TOPIC_STOP}
+        if not terms or not sources:
+            return sources
+        bodies = {
+            r["uid"]: r["text"]
+            for r in self.store.records(
+                "MATCH (s:Source) WHERE s.uid IN $uids RETURN s.uid AS uid, s.title + ' ' + coalesce(s.body, '') AS text",
+                {"uids": [s["uid"] for s in sources]},
+            )
+        }
+        overlap = {uid: len(terms & {_stem(w) for w in _words(text)}) for uid, text in bodies.items()}
+        return sorted(sources, key=lambda s: -overlap.get(s["uid"], 0))
 
     def _relevant_decisions(self, topic: str, uids: list[str]) -> list[str]:
         """Keep decisions that actually cover the question's topic, best first.
