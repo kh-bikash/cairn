@@ -32,6 +32,9 @@ class FakeProvider:
         self._respond = respond
         self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
 
+    def with_options(self, **_: Any) -> FakeProvider:
+        return self
+
     async def _create(self, **request: Any) -> SimpleNamespace:
         self.requests.append(request)
         return self._respond(request)
@@ -45,15 +48,8 @@ def _wire(llm: LLM, respond: Callable[[dict[str, Any]], SimpleNamespace]) -> Fak
 
 
 def _settings(tmp_path: Path, **kw: object) -> Settings:
-    return Settings(
-        _env_file=None,  # type: ignore[call-arg]
-        GROQ_API_KEY="test",  # type: ignore[arg-type]
-        data_dir=tmp_path,
-        model_decide="groq:small",
-        model_extract="groq:big",
-        model_agent="groq:big",
-        **kw,
-    )
+    fields: dict[str, object] = {"model_decide": "groq:small", "model_extract": "groq:big", "model_agent": "groq:big", **kw}
+    return Settings(_env_file=None, GROQ_API_KEY="test", data_dir=tmp_path, **fields)  # type: ignore[call-arg, arg-type]
 
 
 def test_parse_model_ref() -> None:
@@ -100,3 +96,75 @@ async def test_missing_key_raises(tmp_path: Path) -> None:
     assert not llm.available("agent")
     with pytest.raises(LLMNotConfigured):
         await llm.chat("agent", [{"role": "user", "content": "hi"}])
+
+
+def test_gemini_gets_thought_signatures_and_others_do_not() -> None:
+    from cairn.llm.client import _adapt_messages
+
+    signed = {"google": {"thought_signature": "abc"}}
+    msgs = [
+        {"role": "user", "content": "q"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {"id": "1", "type": "function", "function": {"name": "why", "arguments": "{}"}, "extra_content": signed},
+                {"id": "2", "type": "function", "function": {"name": "who_knows", "arguments": "{}"}},
+            ],
+        },
+    ]
+    gem = _adapt_messages("gemini", msgs)[1]["tool_calls"]
+    assert gem[0]["extra_content"] == signed
+    assert gem[1]["extra_content"]["google"]["thought_signature"] == "skip_thought_signature_validator"
+    assert all("extra_content" not in tc for tc in _adapt_messages("groq", msgs)[1]["tool_calls"])
+
+
+async def test_chain_fails_over_on_overload(tmp_path: Path) -> None:
+    import httpx2
+    import openai
+
+    llm = LLM(_settings(tmp_path, llm_cache=False, model_decide="groq:busy,groq:spare"))
+
+    def respond(request: dict[str, Any]) -> SimpleNamespace:
+        if request["model"] == "busy":
+            response = httpx2.Response(503, request=httpx2.Request("POST", "https://example.invalid"))
+            raise openai.InternalServerError("overloaded", response=response, body=None)
+        return _completion('{"answer": "yes", "confidence": 1.0}')
+
+    fake = _wire(llm, respond)
+    out = await llm.structured("decide", [{"role": "user", "content": "q"}], Pick)
+    assert out.answer == "yes"
+    assert [r["model"] for r in fake.requests] == ["busy", "spare"]
+
+
+async def test_cache_replays_without_api_key(tmp_path: Path) -> None:
+    keyed = LLM(_settings(tmp_path))
+    _wire(keyed, lambda _: _completion('{"answer": "yes", "confidence": 0.8}'))
+    msgs = [{"role": "user", "content": "q"}]
+    await keyed.structured("decide", msgs, Pick)
+    keyless = LLM(Settings(_env_file=None, data_dir=tmp_path, model_decide="groq:small"))  # type: ignore[call-arg]
+    assert (await keyless.structured("decide", msgs, Pick)).confidence == 0.8
+
+
+async def test_daily_quota_trips_circuit_breaker(tmp_path: Path) -> None:
+    import httpx2
+    import openai
+
+    from cairn.llm.client import LLMQuotaExhausted
+
+    llm = LLM(_settings(tmp_path, llm_cache=False, model_decide="groq:capped,groq:spare"))
+    calls: list[str] = []
+
+    def respond(request: dict[str, Any]) -> SimpleNamespace:
+        calls.append(request["model"])
+        response = httpx2.Response(429, request=httpx2.Request("POST", "https://example.invalid"))
+        raise openai.RateLimitError("quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier", response=response, body=None)
+
+    _wire(llm, respond)
+    with pytest.raises(LLMQuotaExhausted):
+        await llm.chat("decide", [{"role": "user", "content": "q"}])
+    assert calls == ["capped", "spare"], "daily quota fails over immediately, without retries"
+    assert llm.exhausted == {"groq:capped", "groq:spare"}
+    with pytest.raises(LLMQuotaExhausted):
+        await llm.chat("decide", [{"role": "user", "content": "again"}])
+    assert len(calls) == 2, "exhausted models are not called again this session"

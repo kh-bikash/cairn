@@ -27,6 +27,7 @@ from typing import Any
 
 import openai
 
+from cairn.actions.service import ActionError, ActionService
 from cairn.agent.router import route
 from cairn.agent.tools import TOOL_SPECS, Evidence, ToolError, ToolResult, Tools, dispatch, fmt_date
 from cairn.config import Settings
@@ -35,7 +36,7 @@ from cairn.llm.client import LLM, LLMNotConfigured
 
 log = logging.getLogger(__name__)
 
-_CITE = re.compile(r"\[(\d{1,3})\]")
+_CITE = re.compile(r"\[\s*(\d+(?:\.\d+)?(?:\s*,\s*\d+(?:\.\d+)?)*)\s*\]")
 _MAX_TOOL_CHARS = 9_000
 
 SYSTEM_PROMPT = """You are Cairn, a company brain for an engineering organisation. You answer questions about
@@ -46,12 +47,42 @@ How to work:
   `who_knows` for expertise, `impact` for "what breaks / depends on", `bus_factor` and `person_profile` for risk,
   `timeline` for "what changed / as of", `connect` for "how is X related to Y", `drift_report` for stale decisions.
 - If a tool says no system/person matches, call `list_systems` or `search` and retry with a valid name.
-- Each tool result lists `citable_sources` with a number `ref`. Cite every factual claim with [ref], e.g. "… was chosen
-  for speed [3]." Only use refs you were given. Never invent PR numbers, people, dates or quotes.
+- Items in tool results carry a citation number `ref`. Cite every factual claim with it in square brackets, e.g.
+  "… was chosen for speed [3]." Use only integer refs you were given. Never invent PR numbers, people, dates or quotes.
+- For "why" questions, give each premise (reason) behind the decision, quote its key phrase briefly, and cite its ref.
+  Mention rejected alternatives when present.
+- To open a specific PR/issue/decision by its uid (e.g. 'FalkorDB/falkordb-py#271'), call `details`, not `search`.
 - If a decision has `challenged_by` entries or `drift_detected`, say so explicitly: the reason may no longer hold.
 - If the graph does not contain the answer, say what you checked and that you don't know.
 - Be concise: lead with the answer in 1-2 sentences, then supporting bullets. Use @handles for people and dates as YYYY-MM-DD.
+- You can PROPOSE actions (`propose_wiki_update`, `propose_issue_routing`) when the user asks you to do something, e.g. update
+  the wiki after drift or route an issue. Proposals wait for a human to approve them in the Actions panel; never claim they ran.
 """
+
+_S = {"type": "string"}
+ACTION_SPECS: list[dict[str, Any]] = [
+    {
+        "type": "function",
+        "function": {
+            "name": "propose_wiki_update",
+            "description": "Propose a PR that refreshes the OKF knowledge-base wiki from the graph (needs human approval).",
+            "parameters": {"type": "object", "properties": {"reason": _S}, "required": ["reason"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "propose_issue_routing",
+            "description": "Propose a comment suggesting the right experts for an issue in the sandbox repo (needs human approval).",
+            "parameters": {
+                "type": "object",
+                "properties": {"repo": {**_S, "description": "owner/name"}, "number": {"type": "integer"}},
+                "required": ["repo", "number"],
+            },
+        },
+    },
+]
+ACTION_NAMES = {spec["function"]["name"] for spec in ACTION_SPECS}
 
 
 @dataclass
@@ -77,11 +108,13 @@ def clean_citations(text: str, ledger: Ledger) -> tuple[str, list[dict[str, Any]
     cited: dict[int, dict[str, Any]] = {}
 
     def repl(m: re.Match[str]) -> str:
-        ref = int(m.group(1))
-        if ref in valid:
-            cited.setdefault(ref, valid[ref])
-            return m.group(0)
-        return ""
+        kept = []
+        for part in m.group(1).split(","):
+            part = part.strip()
+            if part.isdigit() and int(part) in valid:  # "[10.67]" or unknown numbers are dropped, never shown
+                cited.setdefault(int(part), valid[int(part)])
+                kept.append(f"[{int(part)}]")
+        return "".join(kept)
 
     cleaned = _CITE.sub(repl, text)
     cleaned = re.sub(r"[ \t]+([.,;:])", r"\1", cleaned)
@@ -102,10 +135,27 @@ def _shrink(value: Any, max_items: int) -> Any:
     return value
 
 
+_UID_KEYS = frozenset({"uid", "source", "decided_in", "challenged_by"})
+
+
+def annotate_refs(value: Any, ledger: Ledger) -> Any:
+    """Add `ref` beside any uid that has a citation number, e.g. {"source": "x#1", "ref": 4}."""
+    if isinstance(value, list):
+        return [annotate_refs(v, ledger) for v in value]
+    if isinstance(value, dict):
+        out = {k: annotate_refs(v, ledger) for k, v in value.items()}
+        for key in _UID_KEYS & value.keys():
+            uid = value[key]
+            if isinstance(uid, str) and uid in ledger.entries and "ref" not in out:
+                out["ref"] = ledger.entries[uid]["ref"]
+        return out
+    return value
+
+
 def tool_payload(result: ToolResult, ledger: Ledger) -> str:
     """What the model sees: the tool's data plus numbered citable sources, size-capped without breaking JSON."""
     sources = [{"ref": ledger.add(ev), "uid": ev.uid, "title": ev.title, **({"quote": ev.quote} if ev.quote else {})} for ev in result.evidence]
-    body: dict[str, Any] = {"result": result.data, "citable_sources": sources}
+    body: dict[str, Any] = {"result": annotate_refs(result.data, ledger), "citable_sources": sources}
     for max_items in (50, 15, 8, 4):
         payload = json.dumps(_shrink(body, max_items), default=str, ensure_ascii=False)
         if len(payload) <= _MAX_TOOL_CHARS:
@@ -119,6 +169,7 @@ class Agent:
         self.llm = llm
         self.settings = settings
         self.tools = Tools(store)
+        self.actions = ActionService(store, settings)
 
     async def run(self, question: str, history: list[dict[str, str]] | None = None) -> AsyncIterator[dict[str, Any]]:
         question = question.strip()
@@ -151,7 +202,7 @@ class Agent:
         ]
         for step in range(self.settings.agent_max_steps):
             final_step = step == self.settings.agent_max_steps - 1
-            result = await self.llm.chat("agent", messages, tools=None if final_step else TOOL_SPECS, use_cache=False)
+            result = await self.llm.chat("agent", messages, tools=None if final_step else TOOL_SPECS + ACTION_SPECS, use_cache=False)
             if not result.tool_calls:
                 yield await self._finish(question, result.content, ledger, used, mode="agent")
                 return
@@ -170,8 +221,11 @@ class Agent:
 
     async def _run_tool(self, call_id: str, name: str, args: dict[str, Any], ledger: Ledger, used: SubGraph) -> tuple[dict[str, Any], str, ToolResult | None]:
         try:
-            result = await asyncio.to_thread(dispatch, self.tools, name, args)
-        except ToolError as exc:
+            if name in ACTION_NAMES:
+                result = await asyncio.to_thread(self._propose, name, args)
+            else:
+                result = await asyncio.to_thread(dispatch, self.tools, name, args)
+        except (ToolError, ActionError) as exc:
             event = {
                 "type": "tool_result",
                 "id": call_id,
@@ -192,11 +246,24 @@ class Agent:
             "subgraph": result.subgraph.to_dict(),
             "evidence": [ledger.entries[ev.uid] for ev in result.evidence],
         }
+        if name in ACTION_NAMES:
+            event["action"] = result.data["action"]
         return event, content, result
+
+    def _propose(self, name: str, args: dict[str, Any]) -> ToolResult:
+        try:
+            if name == "propose_wiki_update":
+                action = self.actions.propose_wiki_update(str(args.get("reason") or "Requested by the agent"))
+            else:
+                action = self.actions.propose_issue_routing(str(args["repo"]), int(args["number"]))
+        except (KeyError, ValueError, TypeError) as exc:
+            raise ToolError(f"bad arguments for {name}: {exc}") from exc
+        data = {"action": action.public(), "note": "Pending human approval in the Actions panel. It has NOT been executed."}
+        return ToolResult(data, f"proposed {action.kind} ({action.uid}), awaiting approval")
 
     # ------------------------------------------------------------------ router mode
     async def _router_answer(self, question: str, ledger: Ledger, used: SubGraph) -> AsyncIterator[dict[str, Any]]:
-        plan = await asyncio.to_thread(route, self.tools, question)
+        plan = await asyncio.to_thread(route, self.tools, question, self.settings.action_repos)
         results: list[tuple[str, ToolResult]] = []
         for i, (name, args) in enumerate(plan.calls):
             call_id = f"route_{i}"

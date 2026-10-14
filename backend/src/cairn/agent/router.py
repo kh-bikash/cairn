@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from cairn.agent.loop import Ledger
 
 _INTENTS: list[tuple[str, re.Pattern[str]]] = [
+    ("act_wiki", re.compile(r"\b(update|refresh|publish|sync|regenerate)\b.*\b(wiki|knowledge ?base|docs?)\b", re.I)),
+    ("act_route", re.compile(r"\b(route|triage|assign)\b.*#\s*\d+", re.I)),
     ("drift", re.compile(r"\b(drift|stale|outdated|still (true|valid|hold)|no longer|out of date)\b", re.I)),
     ("risk", re.compile(r"\b(bus factor|leaves?|left|quits?|single point|knowledge risk|concentrat\w*|handoff|hand off)\b", re.I)),
     ("teams", re.compile(r"\b(teams?|who works with|groups?)\b", re.I)),
@@ -124,8 +126,14 @@ class Plan:
         return "\n\n".join(p for p in parts if p).strip() or "The graph returned no results for that question."
 
 
-def route(tools: Tools, question: str) -> Plan:
+def route(tools: Tools, question: str, action_repos: list[str] | None = None) -> Plan:
     intent = intent_of(question)
+    if intent == "act_wiki":
+        return Plan(intent, [("propose_wiki_update", {"reason": question})])
+    if intent == "act_route" and action_repos:
+        number = int(re.search(r"#\s*(\d+)", question).group(1))  # type: ignore[union-attr]
+        named = [r for r in action_repos if r.lower() in question.lower()]
+        return Plan(intent, [("propose_issue_routing", {"repo": (named or action_repos)[0], "number": number})])
     systems = find_systems(tools, question)
     people = find_people(tools, question)
     topic = _STOPWORDS.sub(" ", question).strip(" ?.!") or question
@@ -292,7 +300,14 @@ def _render_generic(r: ToolResult, ledger: Ledger) -> str:
     return "\n".join(lines) or r.summary
 
 
+def _render_proposal(r: ToolResult, ledger: Ledger) -> str:
+    a = r.data["action"]
+    return f"Proposed: **{a['title']}** on {a['repo']}. It is waiting for your approval in the Actions panel and has not run yet."
+
+
 RENDERERS: dict[str, Callable[[ToolResult, Ledger], str]] = {
+    "propose_wiki_update": _render_proposal,
+    "propose_issue_routing": _render_proposal,
     "why": _render_why,
     "who_knows": _render_who,
     "impact": _render_impact,

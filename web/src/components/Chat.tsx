@@ -19,6 +19,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Citation, Step, Turn } from '../types'
+import { ActionCard } from './Actions'
 
 const TOOL_META: Record<string, { icon: LucideIcon; verb: string }> = {
   search: { icon: Search, verb: 'Searching' },
@@ -32,6 +33,10 @@ const TOOL_META: Record<string, { icon: LucideIcon; verb: string }> = {
   drift_report: { icon: TrendingDown, verb: 'Checking for drift' },
   teams: { icon: Network, verb: 'Detecting teams' },
   list_systems: { icon: Boxes, verb: 'Listing systems' },
+  suggest_owners: { icon: Users, verb: 'Finding owners' },
+  details: { icon: Search, verb: 'Opening' },
+  propose_wiki_update: { icon: Boxes, verb: 'Drafting wiki update' },
+  propose_issue_routing: { icon: Users, verb: 'Drafting issue routing' },
 }
 
 export const SUGGESTIONS = [
@@ -143,6 +148,11 @@ function TurnView({ turn, onCite, onStep }: { turn: Turn; onCite: (c: Citation) 
           ))}
         </ol>
       )}
+      {turn.steps
+        .filter((s) => s.action)
+        .map((s) => (
+          <ActionCard key={s.action!.uid} action={s.action!} />
+        ))}
       {turn.notices.map((n) => (
         <p key={n} className="rounded-md bg-amber-400/10 px-2.5 py-1.5 text-xs text-amber-200">
           {n}

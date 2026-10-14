@@ -57,7 +57,7 @@ class GitHubClient:
     def __exit__(self, *_: object) -> None:
         self.close()
 
-    @retry(retry=retry_if_exception(_retryable), wait=wait_exponential_jitter(initial=2, max=60), stop=stop_after_attempt(6), reraise=True)
+    @retry(retry=retry_if_exception(_retryable), wait=wait_exponential_jitter(multiplier=2, max=60), stop=stop_after_attempt(6), reraise=True)
     def graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
         resp = self._http.post("/graphql", json={"query": query, "variables": variables})
         if _is_secondary_limit(resp):
@@ -73,7 +73,7 @@ class GitHubClient:
         self._respect_budget(data.get("rateLimit"))
         return data
 
-    @retry(retry=retry_if_exception(_retryable), wait=wait_exponential_jitter(initial=2, max=60), stop=stop_after_attempt(6), reraise=True)
+    @retry(retry=retry_if_exception(_retryable), wait=wait_exponential_jitter(multiplier=2, max=60), stop=stop_after_attempt(6), reraise=True)
     def rest(self, method: str, path: str, **kwargs: Any) -> Any:
         resp = self._http.request(method, path, **kwargs)
         if _is_secondary_limit(resp):

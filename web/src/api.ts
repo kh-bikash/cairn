@@ -1,4 +1,4 @@
-import type { AgentEvent, Health, Stats, SubGraph, ToolResponse } from './types'
+import type { Action, AgentEvent, Health, Stats, SubGraph, ToolResponse } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE ?? ''
 
@@ -16,7 +16,14 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+const post = (body: unknown) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+
 export const api = {
+  actions: () => json<{ actions: Action[]; allowed_repos: string[]; wiki_repo: string | null }>('/api/actions'),
+  proposeWiki: (reason: string) => json<Action>('/api/actions/wiki', post({ reason })),
+  proposeRoute: (repo: string, number: number) => json<Action>('/api/actions/route-issue', post({ repo, number })),
+  approve: (uid: string) => json<Action>(`/api/actions/${uid}/approve`, post({})),
+  reject: (uid: string) => json<Action>(`/api/actions/${uid}/reject`, post({})),
   health: () => json<Health>('/api/health'),
   stats: () => json<Stats>('/api/stats'),
   overview: () => json<SubGraph>('/api/graph/overview'),

@@ -41,6 +41,7 @@ export type AgentEvent =
       error?: boolean
       subgraph: SubGraph
       evidence: Citation[]
+      action?: Action
     }
   | { type: 'answer'; text: string; citations: Citation[]; answer_uid: string; mode: 'agent' | 'router' }
   | { type: 'error'; message: string }
@@ -62,6 +63,7 @@ export interface Step {
   summary?: string
   error?: boolean
   nodeIds: string[]
+  action?: Action
 }
 
 export interface Turn {
@@ -94,4 +96,17 @@ export interface ToolResponse<T = Record<string, unknown>> {
   data: T
   subgraph: SubGraph
   evidence: Citation[]
+}
+
+export interface Action {
+  uid: string
+  kind: 'wiki_pr' | 'issue_comment' | string
+  status: 'pending' | 'running' | 'done' | 'noop' | 'failed' | 'rejected' | string
+  title: string
+  repo: string
+  preview: string
+  ts: number
+  result_url: string | null
+  error: string | null
+  files: number | null
 }

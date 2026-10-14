@@ -35,6 +35,31 @@ class LLMNotConfigured(RuntimeError):
     """Raised when a role's provider has no API key."""
 
 
+class LLMQuotaExhausted(LLMNotConfigured):
+    """Every model in a role's chain has hit its daily quota; callers treat it like 'no LLM available'."""
+
+
+_MAX_ATTEMPTS = 3
+_MAX_WAIT_S = 65.0
+_RETRY_DELAY = re.compile(r"retry(?:Delay|[ _-]after)['\"]?\s*[:=]\s*['\"]?(\d+(?:\.\d+)?)s?", re.I)
+
+
+def _is_daily_quota(exc: openai.RateLimitError) -> bool:
+    text = str(exc)
+    return "PerDay" in text or "per day" in text.lower() or "RequestsPerDay" in text
+
+
+def _retry_delay(exc: openai.RateLimitError) -> float | None:
+    header = exc.response.headers.get("retry-after") if exc.response is not None else None
+    if header:
+        try:
+            return float(header)
+        except ValueError:
+            pass
+    m = _RETRY_DELAY.search(str(exc))
+    return float(m.group(1)) if m else None
+
+
 @dataclass
 class ChatResult:
     content: str
@@ -49,7 +74,16 @@ class ChatResult:
         """The assistant message to append to the conversation."""
         msg: dict[str, Any] = {"role": "assistant", "content": self.content or None}
         if self.tool_calls:
-            msg["tool_calls"] = [{"id": tc["id"], "type": "function", "function": {"name": tc["name"], "arguments": tc["arguments"]}} for tc in self.tool_calls]
+            msg["tool_calls"] = [
+                {
+                    "id": tc["id"],
+                    "type": "function",
+                    "function": {"name": tc["name"], "arguments": tc["arguments"]},
+                    # Gemini thought signatures must be echoed back on the next turn.
+                    **({"extra_content": tc["extra_content"]} if tc.get("extra_content") else {}),
+                }
+                for tc in self.tool_calls
+            ]
         return msg
 
 
@@ -92,17 +126,22 @@ class LLM:
         self.usage = UsageBook()
         self._clients: dict[str, AsyncOpenAI] = {}
         self._limits: dict[str, asyncio.Semaphore] = {}
+        self.exhausted: set[str] = set()  # "provider:model" refs past their daily quota (circuit breaker)
         self._cache_dir: Path | None = settings.cache_dir if settings.llm_cache else None
         if self._cache_dir:
             self._cache_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------ plumbing
+    def model_chain(self, role: Role) -> list[tuple[str, str]]:
+        """A role may list fallbacks: 'gemini:gemini-2.5-flash,gemini:gemini-2.5-flash-lite'."""
+        refs = str(getattr(self.settings, f"model_{role}")).split(",")
+        return [parse_model_ref(r.strip()) for r in refs if r.strip()]
+
     def model_for(self, role: Role) -> tuple[str, str]:
-        return parse_model_ref(getattr(self.settings, f"model_{role}"))
+        return self.model_chain(role)[0]
 
     def available(self, role: Role) -> bool:
-        provider, _ = self.model_for(role)
-        return self.settings.api_key_for(provider) is not None
+        return any(self.settings.api_key_for(p) for p, _ in self.model_chain(role))
 
     def _client(self, provider: str) -> AsyncOpenAI:
         if provider not in self._clients:
@@ -113,7 +152,7 @@ class LLM:
             if provider == "typesafe" and self.settings.typesafe_base_url:
                 base_url = self.settings.typesafe_base_url
             # The SDK retries 408/409/429/5xx with exponential backoff and honours Retry-After.
-            self._clients[provider] = AsyncOpenAI(api_key=key, base_url=base_url, max_retries=6, timeout=90.0)
+            self._clients[provider] = AsyncOpenAI(api_key=key, base_url=base_url, max_retries=0, timeout=45.0)  # retries/failover are handled in chat()
             self._limits[provider] = asyncio.Semaphore(self.settings.llm_max_concurrency)
         return self._clients[provider]
 
@@ -135,23 +174,85 @@ class LLM:
         max_tokens: int | None = None,
         use_cache: bool = True,
     ) -> ChatResult:
-        provider, model = self.model_for(role)
-        client = self._client(provider)
-        request: dict[str, Any] = {"model": model, "messages": messages, "temperature": temperature}
+        chain = self.model_chain(role)
+        requests = [(p, m, self._request(p, m, messages, tools, json_mode, temperature, max_tokens)) for p, m in chain]
+        cacheable = use_cache and temperature == 0
+
+        # Cache first, for every model in the chain: a replay needs no API key and no quota.
+        if cacheable:
+            for provider, _, request in requests:
+                path = self._cache_path({"provider": provider, **request})
+                if path and path.exists():
+                    data = json.loads(path.read_text(encoding="utf-8"))
+                    result = ChatResult(**{**data, "cached": True, "latency_ms": 0})
+                    self.usage.record(role, result)
+                    return result
+
+        live = [(p, m, r) for p, m, r in requests if self.settings.api_key_for(p)]
+        if not live:
+            raise LLMNotConfigured(f"no API key for any model configured for role {role!r}")
+        available = [(p, m, r) for p, m, r in live if f"{p}:{m}" not in self.exhausted]
+        if not available:
+            raise LLMQuotaExhausted(f"every model for role {role!r} has used its daily quota: {', '.join(sorted(self.exhausted))}")
+        last_error: Exception | None = None
+        for index, (provider, model, request) in enumerate(available):
+            is_last = index == len(available) - 1
+            # Retries are ours, not the SDK's: a daily-quota 429 must fail over at once, not back off for a minute.
+            client = self._client(provider).with_options(max_retries=0)
+            for attempt in range(_MAX_ATTEMPTS):
+                try:
+                    result = await self._call(role, provider, model, client, request)
+                except openai.RateLimitError as exc:
+                    last_error = exc
+                    if _is_daily_quota(exc):
+                        self.exhausted.add(f"{provider}:{model}")
+                        log.warning("%s:%s used its daily quota; skipping it for this session", provider, model)
+                        break
+                    delay = _retry_delay(exc)
+                    if delay is None or delay > _MAX_WAIT_S or attempt == _MAX_ATTEMPTS - 1:
+                        log.warning("%s:%s rate limited; trying next model", provider, model)
+                        break
+                    await asyncio.sleep(delay)
+                    continue
+                except (openai.InternalServerError, openai.APIConnectionError, openai.APITimeoutError) as exc:
+                    last_error = exc
+                    # Overloaded: switch models at once if we can; only the last model in the chain waits it out.
+                    if not is_last or attempt == _MAX_ATTEMPTS - 1:
+                        log.warning("%s:%s unavailable (%s); trying next model", provider, model, type(exc).__name__)
+                        break
+                    await asyncio.sleep(2.0 * (attempt + 1))
+                    continue
+                if cacheable and (path := self._cache_path({"provider": provider, **request})):
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    payload = {k: v for k, v in vars(result).items() if k not in {"cached", "latency_ms"}}
+                    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+                return result
+        assert last_error is not None
+        if all(f"{p}:{m}" in self.exhausted for p, m, _ in available):
+            raise LLMQuotaExhausted(f"every model for role {role!r} has used its daily quota") from last_error
+        raise last_error
+
+    @staticmethod
+    def _request(
+        provider: str,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None,
+        json_mode: bool,
+        temperature: float,
+        max_tokens: int | None,
+    ) -> dict[str, Any]:
+        request: dict[str, Any] = {"model": model, "messages": _adapt_messages(provider, messages), "temperature": temperature}
         if tools:
             request["tools"] = tools
         if json_mode:
             request["response_format"] = {"type": "json_object"}
-        if max_tokens:
+        # Gemini "thinking" tokens count against max_tokens and can leave the visible answer empty.
+        if max_tokens and provider != "gemini":
             request["max_tokens"] = max_tokens
+        return request
 
-        cache_path = self._cache_path({"provider": provider, **request}) if use_cache and temperature == 0 else None
-        if cache_path and cache_path.exists():
-            data = json.loads(cache_path.read_text(encoding="utf-8"))
-            result = ChatResult(**{**data, "cached": True, "latency_ms": 0})
-            self.usage.record(role, result)
-            return result
-
+    async def _call(self, role: Role, provider: str, model: str, client: AsyncOpenAI, request: dict[str, Any]) -> ChatResult:
         started = time.perf_counter()
         async with self._limits[provider]:
             try:
@@ -163,7 +264,14 @@ class LLM:
         result = ChatResult(
             content=choice.content or "",
             tool_calls=[
-                {"id": tc.id, "name": tc.function.name, "arguments": tc.function.arguments or "{}"} for tc in (choice.tool_calls or []) if tc.type == "function"
+                {
+                    "id": tc.id,
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments or "{}",
+                    "extra_content": (tc.model_extra or {}).get("extra_content"),
+                }
+                for tc in (choice.tool_calls or [])
+                if tc.type == "function"
             ],
             model=f"{provider}:{model}",
             cached=False,
@@ -172,10 +280,6 @@ class LLM:
             completion_tokens=getattr(resp.usage, "completion_tokens", 0) or 0,
         )
         self.usage.record(role, result)
-        if cache_path:
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-            payload = {k: v for k, v in vars(result).items() if k not in {"cached", "latency_ms"}}
-            cache_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
         return result
 
     async def structured(self, role: Role, messages: list[dict[str, Any]], schema: type[T], *, max_tokens: int | None = None) -> T:
@@ -195,6 +299,29 @@ class LLM:
             ]
             fixed = await self.chat(role, repair, json_mode=True, max_tokens=max_tokens)
             return schema.model_validate(_loads_lenient(fixed.content))
+
+
+# Google's documented placeholder for function calls the current model didn't sign (e.g. made by a fallback model).
+_SKIP_SIGNATURE = {"google": {"thought_signature": "skip_thought_signature_validator"}}
+
+
+def _adapt_messages(provider: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Gemini requires a thought signature on every prior function call; other providers reject the field."""
+    if not any(m.get("tool_calls") for m in messages):
+        return messages
+    out = []
+    for m in messages:
+        if m.get("tool_calls"):
+            calls = []
+            for tc in m["tool_calls"]:
+                tc = {k: v for k, v in tc.items() if k != "extra_content"}
+                if provider == "gemini":
+                    original = next((c.get("extra_content") for c in m["tool_calls"] if c.get("id") == tc.get("id")), None)
+                    tc["extra_content"] = original or _SKIP_SIGNATURE
+                calls.append(tc)
+            m = {**m, "tool_calls": calls}
+        out.append(m)
+    return out
 
 
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.M)

@@ -168,3 +168,22 @@ def test_ft_query_escapes_and_prefixes() -> None:
 def test_drift_search_terms_drop_stopwords() -> None:
     q = search_terms("Redis supports persistence, which we need for warm restarts after deploys")
     assert "which" not in q.split("|") and "persistence" in q.split("|")
+
+
+def test_malformed_and_grouped_citations_are_normalised() -> None:
+    ledger = Ledger()
+    ledger.add(Evidence("a", "A", "u", "pr"))
+    ledger.add(Evidence("b", "B", "u", "pr"))
+    text, cites = clean_citations("Chosen for speed [10.666666666666668]. Also [1, 2] and [ 2 ] and [9].", ledger)
+    assert text == "Chosen for speed. Also [1][2] and [2] and."
+    assert [c["ref"] for c in cites] == [1, 2]
+
+
+def test_refs_are_annotated_inline() -> None:
+    from cairn.agent.loop import annotate_refs
+
+    ledger = Ledger()
+    ledger.add(Evidence("x#1", "t", "u", "pr"))
+    data = {"premises": [{"claim": "c", "source": "x#1"}, {"claim": "d", "source": "unknown"}]}
+    out = annotate_refs(data, ledger)
+    assert out["premises"][0]["ref"] == 1 and "ref" not in out["premises"][1]

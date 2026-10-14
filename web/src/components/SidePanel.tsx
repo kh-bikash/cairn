@@ -1,10 +1,11 @@
 import { ExternalLink, Loader2, Maximize2, Quote, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
+import { ActionsPanel } from './Actions'
 import { nodeColor } from '../graph/style'
 import type { Citation, GNode, Stats, SubGraph, ToolResponse } from '../types'
 
-export type Tab = 'evidence' | 'insights' | 'node'
+export type Tab = 'evidence' | 'insights' | 'actions' | 'node'
 
 interface Props {
   tab: Tab
@@ -21,7 +22,7 @@ export function SidePanel(props: Props) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex gap-1 border-b border-ink-700 px-3 pt-2" role="tablist">
-        {(['evidence', 'insights', 'node'] as Tab[]).map((t) => (
+        {(['evidence', 'insights', 'actions', 'node'] as Tab[]).map((t) => (
           <button
             key={t}
             role="tab"
@@ -37,6 +38,7 @@ export function SidePanel(props: Props) {
       <div className="flex-1 overflow-y-auto bg-ink-800/40 p-3">
         {tab === 'evidence' && <Evidence {...props} />}
         {tab === 'insights' && <Insights onShowSubgraph={props.onShowSubgraph} />}
+        {tab === 'actions' && <ActionsPanel />}
         {tab === 'node' && <NodeDetail id={props.selected} onShowSubgraph={props.onShowSubgraph} />}
       </div>
     </div>

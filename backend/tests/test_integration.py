@@ -144,6 +144,9 @@ def test_graph_shape(store: GraphStore) -> None:
         ),
         ("connect", {"a": "carol", "b": "acme/client"}, lambda d: d["path"] and d["path"][-1]["id"] == "acme/client"),
         ("teams", {}, lambda d: d["teams"] and d["teams"][0]["focus_systems"]),
+        ("details", {"uid": "acme/api#10"}, lambda d: d["decisions"][0]["title"] == "Use Redis for the session cache" and d["links"]),
+        ("details", {"uid": "acme/api#10::d1"}, lambda d: d["decision"]["premises"]),
+        ("suggest_owners", {"text": "The session cache loses data after deploys"}, lambda d: d["systems"][0]["system"] == "acme/api:api/cache"),
     ],
 )
 def test_tools_return_real_data(store: GraphStore, name: str, args: dict[str, Any], check: Any) -> None:

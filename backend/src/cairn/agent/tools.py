@@ -574,6 +574,108 @@ class Tools:
             return ("Person", "handle", self.resolve_person(ref)["handle"])
         return ("System", "key", self.resolve_system(ref)["key"])
 
+    def details(self, uid: str) -> ToolResult:
+        """Open one PR/issue/discussion/doc (or a decision) by uid: content, decisions made there, and links."""
+        uid = uid.strip().strip("\"'`")
+        if "::d" in uid:
+            sg = SubGraph()
+            evidence: list[Evidence] = []
+            detail = self._decision_detail(uid, sg, evidence)
+            if detail.get("missing"):
+                raise ToolError(f"no decision {uid!r}")
+            return ToolResult({"decision": detail}, f"decision {uid}", sg, evidence)
+        rows = self.store.records(
+            "MATCH (s:Source {uid: $u}) RETURN s.uid AS uid, s.kind AS kind, s.title AS title, s.url AS url, s.ts AS ts, "
+            "s.state AS state, s.author AS author, substring(coalesce(s.body, ''), 0, 2500) AS body",
+            {"u": uid},
+        )
+        if not rows:
+            raise ToolError(f"no PR/issue/doc with uid {uid!r}; uids look like 'owner/repo#123'")
+        src = rows[0]
+        sg = SubGraph()
+        sid = sg.node("Source", src["uid"], kind=src["kind"], title=src["title"], ts=src["ts"], url=src["url"])
+        evidence = [Evidence(src["uid"], src["title"], src["url"], src["kind"], src["ts"])]
+        decisions = [r["uid"] for r in self.store.records("MATCH (d:Decision)-[:DECIDED_IN]->(:Source {uid: $u}) RETURN d.uid AS uid ORDER BY uid", {"u": uid})]
+        decision_details = [self._decision_detail(d, sg, evidence) for d in decisions]
+        links = self.store.records(
+            """
+            MATCH (:Source {uid: $u})-[r:CLOSES|REFERENCES]-(o:Source) WHERE o.kind IN ['pr', 'issue', 'discussion']
+            RETURN type(r) AS rel, o.uid AS uid, o.title AS title, o.kind AS kind, o.url AS url, o.ts AS ts LIMIT 10
+            """,
+            {"u": uid},
+        )
+        for link in links:
+            sg.edge(sid, link["rel"], sg.node("Source", link["uid"], kind=link["kind"], title=link["title"], ts=link["ts"], url=link["url"]))
+            evidence.append(Evidence(link["uid"], link["title"], link["url"], link["kind"], link["ts"]))
+        people = self.store.records("MATCH (p:Person)-[r:AUTHORED|REVIEWED|MERGED]->(:Source {uid: $u}) RETURN p.handle AS handle, type(r) AS role", {"u": uid})
+        for p in people:
+            sg.edge(sg.node("Person", p["handle"], name=p["handle"]), p["role"], sid)
+        data = {
+            **{k: src[k] for k in ("uid", "kind", "title", "state", "author", "body")},
+            "date": fmt_date(src["ts"]),
+            "people": [{"handle": p["handle"], "role": p["role"].lower()} for p in people],
+            "decisions": decision_details,
+            "links": [{"rel": link["rel"].lower(), "uid": link["uid"], "title": link["title"]} for link in links],
+        }
+        return ToolResult(data, f"{src['kind']} {uid} ({len(decisions)} decisions)", sg, evidence)
+
+    def suggest_owners(self, text: str, limit: int = 3) -> ToolResult:
+        """Who should handle a new issue? Similar past PRs -> the modules they touched -> experts on those modules."""
+        from cairn.agent.router import find_systems  # local import: router imports this module
+        from cairn.extract.drift import search_terms
+
+        weights: dict[str, float] = {}
+        mentioned = find_systems(self, text)
+        explicit = {k for k in mentioned if ":" in k}
+        # Any mention (repo or one of its modules) scopes the similarity search to that repo.
+        repos = sorted({k.split(":", 1)[0] for k in mentioned})
+        terms = search_terms(text, limit=10)
+        similar = (
+            self.store.records(
+                """
+                CALL db.idx.fulltext.queryNodes('Source', $q) YIELD node, score
+                WHERE node.kind IN ['pr', 'issue'] AND ($repos = [] OR node.repo IN $repos)
+                RETURN node.uid AS uid, node.kind AS kind, node.title AS title, node.url AS url, node.ts AS ts, score
+                ORDER BY score DESC LIMIT 15
+                """,
+                {"q": terms, "repos": repos},
+            )
+            if terms
+            else []
+        )
+        if similar:
+            touched = self.store.records(
+                "MATCH (s:Source)-[:TOUCHES]->(m:System) WHERE s.uid IN $uids AND m.kind = 'code' RETURN s.uid AS uid, m.key AS key",
+                {"uids": [s["uid"] for s in similar]},
+            )
+            score_of = {s["uid"]: s["score"] for s in similar}
+            for t in touched:
+                weights[t["key"]] = weights.get(t["key"], 0.0) + score_of[t["uid"]]
+        for key in explicit:
+            weights.setdefault(key, 0.0)
+        if not weights and repos:
+            weights = {r: 1.0 for r in repos}
+        if not weights:
+            return ToolResult({"systems": [], "note": "no similar past work or system mention found"}, "no match", SubGraph())
+        # Modules the issue names outright come first; similar past work orders the rest.
+        ranked = sorted(weights.items(), key=lambda kv: (kv[0] not in explicit, -kv[1]))[:2]
+        sg = SubGraph()
+        evidence = [Evidence(s["uid"], s["title"], s["url"], s["kind"], s["ts"]) for s in similar[:3]]
+        out = []
+        for key, weight in ranked:
+            res = self.who_knows(key, limit=limit)
+            sg.merge(res.subgraph)
+            evidence += res.evidence
+            out.append({"system": key, "evidence_weight": round(weight, 2), "experts": res.data.get("experts", [])})
+        for s in similar[:3]:
+            sg.node("Source", s["uid"], kind=s["kind"], title=s["title"], ts=s["ts"], url=s["url"])
+        data = {
+            "systems": out,
+            "similar_past_work": [{"uid": s["uid"], "title": s["title"], "kind": s["kind"], "date": fmt_date(s["ts"])} for s in similar[:5]],
+            "method": "explicit mentions + modules touched by similar past PRs/issues, then expertise ranking",
+        }
+        return ToolResult(data, f"{len(out)} likely systems", sg, evidence)
+
     def drift_report(self, repo: str | None = None) -> ToolResult:
         rows = self.store.records(
             """
@@ -707,6 +809,18 @@ TOOL_SPECS: list[dict[str, Any]] = [
     ),
     _fn("drift_report", "Decisions whose premises were contradicted by later evidence.", {"repo": _S}, []),
     _fn("teams", "Inferred de-facto teams (community detection over who works on what).", {}, []),
+    _fn(
+        "details",
+        "Open one item by uid: a PR/issue/doc ('owner/repo#123') with its text, people, links and the decisions made there, or a decision ('owner/repo#123::d1').",
+        {"uid": _S},
+        ["uid"],
+    ),
+    _fn(
+        "suggest_owners",
+        "Given an issue/bug/feature description, find the systems it most likely touches (via similar past work) and who should handle it.",
+        {"text": _S},
+        ["text"],
+    ),
     _fn("list_systems", "List known systems (repos and modules) with activity counts.", {"repo": _S}, []),
 ]
 

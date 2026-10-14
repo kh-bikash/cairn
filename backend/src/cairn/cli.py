@@ -31,7 +31,7 @@ def _setup(verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False) ->
         format="%(message)s",
         handlers=[RichHandler(console=console, show_path=False, markup=False)],
     )
-    for noisy in ("httpx", "httpcore", "openai"):
+    for noisy in ("httpx", "httpx2", "httpcore", "openai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
@@ -138,6 +138,81 @@ def drift(limit: Annotated[int, typer.Option()] = 200) -> None:
     report = asyncio.run(run_drift(GraphStore(s), llm, s, limit=limit))
     console.print_json(json.dumps(report))
     console.print_json(json.dumps(llm.usage.snapshot()))
+
+
+okf_app = typer.Typer(no_args_is_help=True, help="Open Knowledge Format bundle export.")
+app.add_typer(okf_app, name="okf")
+
+
+@okf_app.command("export")
+def okf_export(out: Annotated[str, typer.Option(help="Output directory.")] = "data/okf") -> None:
+    """Write the graph as an OKF markdown bundle."""
+    from pathlib import Path
+
+    from cairn.graph.client import GraphStore
+    from cairn.okf.export import export_bundle
+
+    n = export_bundle(GraphStore(get_settings())).write(Path(out))
+    console.print(f"[green]✓[/] wrote {n} OKF pages to {out}")
+
+
+actions_app = typer.Typer(no_args_is_help=True, help="Propose and approve agent actions (sandbox repos only).")
+app.add_typer(actions_app, name="actions")
+
+
+@actions_app.command("list")
+def actions_list() -> None:
+    from cairn.actions.service import ActionService
+    from cairn.graph.client import GraphStore
+
+    s = get_settings()
+    table = Table("uid", "kind", "status", "title", "result")
+    for a in ActionService(GraphStore(s), s).list():
+        table.add_row(a.uid, a.kind, a.status, a.title, a.result_url or a.error or "")
+    console.print(table)
+
+
+@actions_app.command("wiki")
+def actions_wiki(reason: str = "Refresh the knowledge base from the graph") -> None:
+    """Propose a wiki PR with the current OKF bundle."""
+    from cairn.actions.service import ActionService
+    from cairn.graph.client import GraphStore
+
+    s = get_settings()
+    a = ActionService(GraphStore(s), s).propose_wiki_update(reason)
+    console.print(a.preview, markup=False)
+    console.print(f"pending: [bold]{a.uid}[/]  →  cairn actions approve {a.uid}")
+
+
+@actions_app.command("route")
+def actions_route(repo: str, number: int) -> None:
+    """Propose a routing comment on an issue in an allowed repo."""
+    from cairn.actions.service import ActionService
+    from cairn.graph.client import GraphStore
+
+    s = get_settings()
+    a = ActionService(GraphStore(s), s).propose_issue_routing(repo, number)
+    console.print(a.preview, markup=False)
+    console.print(f"pending: [bold]{a.uid}[/]  →  cairn actions approve {a.uid}")
+
+
+@actions_app.command("reject")
+def actions_reject(uid: str) -> None:
+    from cairn.actions.service import ActionService
+    from cairn.graph.client import GraphStore
+
+    s = get_settings()
+    console.print(ActionService(GraphStore(s), s).reject(uid).status)
+
+
+@actions_app.command("approve")
+def actions_approve(uid: str) -> None:
+    from cairn.actions.service import ActionService
+    from cairn.graph.client import GraphStore
+
+    s = get_settings()
+    a = ActionService(GraphStore(s), s).approve(uid)
+    console.print(f"[green]{a.status}[/] {a.result_url or 'nothing to change'}")
 
 
 @app.command()

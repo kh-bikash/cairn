@@ -68,7 +68,7 @@ export default function App() {
             setHighlight(new Set(lit))
             update(id, (t) => ({
               ...t,
-              steps: t.steps.map((s) => (s.id === e.id ? { ...s, summary: e.summary, error: e.error, nodeIds: ids } : s)),
+              steps: t.steps.map((s) => (s.id === e.id ? { ...s, summary: e.summary, error: e.error, nodeIds: ids, action: e.action } : s)),
             }))
             break
           }

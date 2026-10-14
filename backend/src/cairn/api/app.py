@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from cairn.actions.service import ActionError, ActionService
 from cairn.agent.loop import Agent
 from cairn.agent.tools import TOOL_SPECS, ToolError, Tools, dispatch
 from cairn.config import Settings, get_settings
@@ -34,6 +35,15 @@ class ToolRequest(BaseModel):
     args: dict[str, Any] = Field(default_factory=dict)
 
 
+class RouteIssueRequest(BaseModel):
+    repo: str
+    number: int = Field(ge=1)
+
+
+class WikiRequest(BaseModel):
+    reason: str = Field(default="Refresh the knowledge base from the graph", max_length=500)
+
+
 class State:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -41,6 +51,7 @@ class State:
         self.llm = LLM(settings)
         self.agent = Agent(self.store, self.llm, settings)
         self.tools = Tools(self.store)
+        self.actions = ActionService(self.store, settings)
 
 
 @asynccontextmanager
@@ -191,6 +202,36 @@ def create_app() -> FastAPI:
             return {"id": id, "label": label, "props": rows[0]["props"], "neighbors": sg.to_dict()}
 
         return await asyncio.to_thread(build)
+
+    # ------------------------------------------------------------------ actions (human in the loop)
+    async def _act(fn: Any, *args: Any) -> dict[str, Any]:
+        try:
+            action = await asyncio.to_thread(fn, *args)
+        except ActionError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return action.public()  # type: ignore[no-any-return]
+
+    @app.get("/api/actions")
+    async def list_actions(request: Request) -> dict[str, Any]:
+        s = st(request)
+        items = await asyncio.to_thread(s.actions.list)
+        return {"actions": [a.public() for a in items], "allowed_repos": s.settings.action_repos, "wiki_repo": s.settings.wiki_repo}
+
+    @app.post("/api/actions/wiki")
+    async def propose_wiki(body: WikiRequest, request: Request) -> dict[str, Any]:
+        return await _act(st(request).actions.propose_wiki_update, body.reason)
+
+    @app.post("/api/actions/route-issue")
+    async def propose_route(body: RouteIssueRequest, request: Request) -> dict[str, Any]:
+        return await _act(st(request).actions.propose_issue_routing, body.repo, body.number)
+
+    @app.post("/api/actions/{uid}/approve")
+    async def approve_action(uid: str, request: Request) -> dict[str, Any]:
+        return await _act(st(request).actions.approve, uid)
+
+    @app.post("/api/actions/{uid}/reject")
+    async def reject_action(uid: str, request: Request) -> dict[str, Any]:
+        return await _act(st(request).actions.reject, uid)
 
     @app.get("/api/answers")
     async def answers(request: Request, limit: int = 20) -> list[dict[str, Any]]:
