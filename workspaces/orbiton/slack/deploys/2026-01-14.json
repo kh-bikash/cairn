@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Rolling back checkout-api v1.16.5: error rate up after deploy.",
+  "ts": "1768411320.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Looking now.",
+  "ts": "1768411620.000001",
+  "thread_ts": "1768411320.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Done.",
+  "ts": "1768412160.000001",
+  "thread_ts": "1768411320.000001"
+ }
+]

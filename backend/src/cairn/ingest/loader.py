@@ -46,6 +46,12 @@ class Rows:
     references: list[dict[str, Any]] = field(default_factory=list)
     owns: list[dict[str, Any]] = field(default_factory=list)
     depends: list[dict[str, Any]] = field(default_factory=list)
+    # Org structure and non-GitHub sources (Slack, tickets, docs) from workspace importers.
+    teams: list[dict[str, Any]] = field(default_factory=list)
+    member_of: list[dict[str, Any]] = field(default_factory=list)
+    reports_to: list[dict[str, Any]] = field(default_factory=list)
+    team_owns: list[dict[str, Any]] = field(default_factory=list)
+    mentions: list[dict[str, Any]] = field(default_factory=list)
     skipped_bot_prs: int = 0
 
 
@@ -266,7 +272,15 @@ SET s.kind = r.kind, s.repo = r.repo, s.number = r.number, s.title = r.title, s.
 """
 
 WRITES: list[tuple[str, str]] = [
-    ("people", "UNWIND $rows AS r MERGE (p:Person {handle: r.handle}) SET p.name = coalesce(r.name, p.name), p.is_bot = false"),
+    (
+        "people",
+        "UNWIND $rows AS r MERGE (p:Person {handle: r.handle}) SET p.name = coalesce(r.name, p.name), p.is_bot = false, "
+        "p.role = coalesce(r.role, p.role), p.email = coalesce(r.email, p.email), p.left = coalesce(r.left, p.left), "
+        "p.joined = coalesce(r.joined, p.joined), p.team = coalesce(r.team, p.team)",
+    ),
+    ("teams", "UNWIND $rows AS r MERGE (t:Team {key: r.key}) SET t.name = r.name, t.description = r.description"),
+    ("member_of", "UNWIND $rows AS r MATCH (p:Person {handle: r.handle}), (t:Team {key: r.team}) MERGE (p)-[:MEMBER_OF]->(t)"),
+    ("reports_to", "UNWIND $rows AS r MATCH (p:Person {handle: r.handle}), (m:Person {handle: r.manager}) MERGE (p)-[:REPORTS_TO]->(m)"),
     (
         "repos",
         "UNWIND $rows AS r MERGE (s:System {key: r.key}) "
@@ -303,6 +317,8 @@ WRITES: list[tuple[str, str]] = [
     ("references", "UNWIND $rows AS r MATCH (a:Source {uid: r.src}), (b:Source {uid: r.dst}) MERGE (a)-[:REFERENCES]->(b)"),
     ("owns", "UNWIND $rows AS r MATCH (p:Person {handle: r.handle}), (s:System {key: r.key}) MERGE (p)-[e:OWNS]->(s) SET e.via = r.via"),
     ("depends", "UNWIND $rows AS r MATCH (a:System {key: r.src}), (b:System {key: r.dst}) MERGE (a)-[e:DEPENDS_ON]->(b) SET e.via = r.via"),
+    ("team_owns", "UNWIND $rows AS r MATCH (t:Team {key: r.team}), (s:System {key: r.key}) MERGE (t)-[:OWNS]->(s)"),
+    ("mentions", "UNWIND $rows AS r MATCH (s:Source {uid: r.uid}), (m:System {key: r.key}) MERGE (s)-[:MENTIONS]->(m)"),
 ]
 
 

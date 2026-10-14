@@ -1,0 +1,8 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Paged for warehouse-db latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1774347960.000001"
+ }
+]

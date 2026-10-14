@@ -132,7 +132,7 @@ def test_graph_shape(store: GraphStore) -> None:
                 and set(d["decisions"][0]["deciders"]) == {"alice", "bob"}
             ),
         ),
-        ("who_knows", {"system": "api/cache"}, lambda d: d["experts"][0]["handle"] in {"alice", "carol"} and d["experts"][0]["recent_prs"]),
+        ("who_knows", {"system": "api/cache"}, lambda d: d["experts"][0]["handle"] in {"alice", "carol"} and d["experts"][0]["recent_work"]),
         ("who_knows", {"system": "acme/api"}, lambda d: len(d["experts"]) == 3),
         ("impact", {"system": "acme/client"}, lambda d: d["depended_on_by"][0]["repo"] == "acme/api" and d["contacts"]),
         ("bus_factor", {}, lambda d: "at_risk_modules" in d),

@@ -1,0 +1,29 @@
+[
+ {
+  "type": "message",
+  "user": "U01023",
+  "text": "Twilio SMS costs for EU delivery notifications doubled after the pricing change.",
+  "ts": "1772552700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "MessageBird quotes ~40% less per SMS in the EU and has a comparable delivery rate in our test.",
+  "ts": "1772554140.000001",
+  "thread_ts": "1772552700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Platform owns notifications-service, but payments pays the bill. Tom, OK to switch?",
+  "ts": "1772554920.000001",
+  "thread_ts": "1772552700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Fine by me if the delivery rate holds. Let's switch EU first, keep Twilio for Brazil until we measure there.",
+  "ts": "1772556360.000001",
+  "thread_ts": "1772552700.000001"
+ }
+]

@@ -299,6 +299,58 @@ def demo(src: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz") -> 
     console.print_json(json.dumps(store.counts()))
 
 
+workspace_app = typer.Typer(no_args_is_help=True, help="Import a company's exports (Slack, Jira/Linear CSV, docs, org chart).")
+app.add_typer(workspace_app, name="workspace")
+
+
+def workspace_graph(name: str) -> str:
+    import re
+
+    return f"{get_settings().graph_name}_{re.sub(r'[^a-z0-9]+', '_', name.lower()).strip('_')}"
+
+
+@workspace_app.command("import")
+def workspace_import(
+    path: str,
+    graph: Annotated[str | None, typer.Option(help="Graph name; defaults to cairn_<workspace name>.")] = None,
+) -> None:
+    """Load a workspace directory into its own FalkorDB graph (one graph per company)."""
+    from pathlib import Path
+
+    from cairn.graph.client import GraphStore
+    from cairn.importers.workspace import read_workspace
+    from cairn.importers.write import import_workspace
+
+    ws = read_workspace(Path(path))
+    name = graph or workspace_graph(ws.name)
+    report = import_workspace(GraphStore(get_settings(), graph_name=name), ws)
+    console.print(f"[green]✓[/] imported {ws.name!r} into graph {name}")
+    console.print_json(json.dumps(report))
+
+
+@workspace_app.command("list")
+def workspace_list() -> None:
+    """List workspaces (one FalkorDB graph each)."""
+    from cairn.workspaces import list_workspaces
+
+    for w in list_workspaces(get_settings()):
+        console.print(f"{w['graph']:24} {w['name']:28} {w['decisions']:>4} decisions  {w['people']:>4} people")
+
+
+sample_app = typer.Typer(no_args_is_help=True, help="Generate sample company data in real export formats.")
+app.add_typer(sample_app, name="sample")
+
+
+@sample_app.command("orbiton")
+def sample_orbiton(out: Annotated[str, typer.Option()] = "../workspaces/orbiton", seed: int = 7) -> None:
+    """Write the fictional 'Orbiton' company as Slack/Jira/markdown exports."""
+    from pathlib import Path
+
+    from cairn.samples.orbiton import write
+
+    console.print_json(json.dumps(write(Path(out), seed=seed)))
+
+
 @app.command("eval")
 def eval_cmd(
     systems: Annotated[str, typer.Option(help="Comma-separated: cairn,rag,router")] = "cairn,rag,router",

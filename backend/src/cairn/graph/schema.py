@@ -60,6 +60,7 @@ class FulltextIndex:
 
 RANGE_INDEXES: tuple[RangeIndex, ...] = (
     RangeIndex("Person", "handle"),
+    RangeIndex("Team", "key"),
     RangeIndex("System", "key"),
     RangeIndex("System", "repo"),
     RangeIndex("Source", "uid"),
@@ -78,11 +79,13 @@ FULLTEXT_INDEXES: tuple[FulltextIndex, ...] = (
     FulltextIndex("Premise", ("text",)),
     FulltextIndex("System", ("name", "path")),
     FulltextIndex("Person", ("handle", "name")),
+    FulltextIndex("Team", ("name",)),
 )
 
 # Properties that identify each label; used to build stable UI ids and MERGE keys.
 KEY_PROPS: dict[str, str] = {
     "Person": "handle",
+    "Team": "key",
     "System": "key",
     "Source": "uid",
     "Decision": "uid",

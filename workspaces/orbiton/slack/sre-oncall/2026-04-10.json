@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on payments-service.",
+  "ts": "1775822700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Looking now.",
+  "ts": "1775823000.000001",
+  "thread_ts": "1775822700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Looking now.",
+  "ts": "1775823540.000001",
+  "thread_ts": "1775822700.000001"
+ }
+]

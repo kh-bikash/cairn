@@ -1,0 +1,50 @@
+[
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "We need to pick the event bus for events-pipeline before the dispatch rewrite. My vote is Kafka: we need to replay at least 7 days of events when a projection has a bug, and SQS can't do replay.",
+  "ts": "1763460300.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Agree on replay. Kinesis also has replay though?",
+  "ts": "1763461740.000001",
+  "thread_ts": "1763460300.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "It does, but 7-day retention on Kinesis costs more at our volume and none of us has run it. I ran Kafka in production for three years at my last job, and Lena has too, so we can operate it ourselves.",
+  "ts": "1763462520.000001",
+  "thread_ts": "1763460300.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "What peak are we sizing for?",
+  "ts": "1763463960.000001",
+  "thread_ts": "1763460300.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "Around 3k events/s at peak per the growth plan. A 3-broker cluster handles that with lots of headroom.",
+  "ts": "1763464740.000001",
+  "thread_ts": "1763460300.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "OK. Priya, can you write it up as an ADR so arch-review can sign off?",
+  "ts": "1763465520.000001",
+  "thread_ts": "1763460300.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "Will do, ADR-0003 by Friday.",
+  "ts": "1763466960.000001",
+  "thread_ts": "1763460300.000001"
+ }
+]

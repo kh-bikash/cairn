@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Reminder: all-hands Thursday at 16:00.",
+  "ts": "1770285060.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01013",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1770317580.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "Looking now.",
+  "ts": "1770317880.000001",
+  "thread_ts": "1770317580.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "Done.",
+  "ts": "1770318420.000001",
+  "thread_ts": "1770317580.000001"
+ }
+]

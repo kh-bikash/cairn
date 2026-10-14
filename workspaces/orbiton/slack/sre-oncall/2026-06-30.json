@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Can someone from Routing look at the analytics-warehouse dashboard? p99 creeping up.",
+  "ts": "1782807960.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Can you share the dashboard link?",
+  "ts": "1782808260.000001",
+  "thread_ts": "1782807960.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Done.",
+  "ts": "1782808800.000001",
+  "thread_ts": "1782807960.000001"
+ }
+]

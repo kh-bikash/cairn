@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Paged for payments-service latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1773144540.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Paged for driver-app latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1773149220.000001"
+ }
+]

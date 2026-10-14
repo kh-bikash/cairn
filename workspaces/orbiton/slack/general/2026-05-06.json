@@ -1,0 +1,35 @@
+[
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Welcome Noah to the team!",
+  "ts": "1778064240.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
+  "text": "Ack.",
+  "ts": "1778064540.000001",
+  "thread_ts": "1778064240.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Welcome Maya to the team!",
+  "ts": "1778072400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Thanks!",
+  "ts": "1778072700.000001",
+  "thread_ts": "1778072400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Looking now.",
+  "ts": "1778073240.000001",
+  "thread_ts": "1778072400.000001"
+ }
+]

@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on dispatch-api.",
+  "ts": "1780936920.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "👍",
+  "ts": "1780937220.000001",
+  "thread_ts": "1780936920.000001"
+ }
+]

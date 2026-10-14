@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Driver app needs to keep working in dead zones for a full shift. Session cookies won't work offline.",
+  "ts": "1768212900.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "JWT with short-lived access tokens + refresh tokens?",
+  "ts": "1768214340.000001",
+  "thread_ts": "1768212900.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Yes: 15 min access tokens, 8 hour refresh tokens so a shift survives offline. ADR-0006 coming.",
+  "ts": "1768215120.000001",
+  "thread_ts": "1768212900.000001"
+ }
+]

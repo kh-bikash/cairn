@@ -1,0 +1,29 @@
+[
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Following the postmortem: I don't think we should keep running our own Kafka. Nobody left on the team has real Kafka ops experience and it showed on the 14th.",
+  "ts": "1784547000.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Options are MSK (managed Kafka) or moving to Kinesis.",
+  "ts": "1784548440.000001",
+  "thread_ts": "1784547000.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Kinesis means rewriting all 14 consumers. MSK keeps the Kafka protocol, consumers don't change.",
+  "ts": "1784549220.000001",
+  "thread_ts": "1784547000.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Agreed, MSK. I'll open PLAT-212 to evaluate cost and write ADR-0011.",
+  "ts": "1784550660.000001",
+  "thread_ts": "1784547000.000001"
+ }
+]

@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "MessageBird delivery rate in Brazil is 81% vs 97% on Twilio in the pilot.",
+  "ts": "1781082000.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Then Brazil stays on Twilio. Good that we didn't switch everything at once.",
+  "ts": "1781083440.000001",
+  "thread_ts": "1781082000.000001"
+ }
+]

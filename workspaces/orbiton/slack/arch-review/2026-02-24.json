@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "RFC-0009: build vs buy for feature flags. LaunchDarkly quote is $48k/yr for our seat count.",
+  "ts": "1771941600.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Our needs are simple: boolean flags, percentage rollouts, per-tenant overrides.",
+  "ts": "1771943040.000001",
+  "thread_ts": "1771941600.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01000",
+  "text": "Build it, but keep it boring. Revisit if we need experimentation.",
+  "ts": "1771943820.000001",
+  "thread_ts": "1771941600.000001"
+ }
+]

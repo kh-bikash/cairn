@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Can someone from Platform look at the auth-service dashboard? p99 creeping up.",
+  "ts": "1781266800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Looking now.",
+  "ts": "1781267100.000001",
+  "thread_ts": "1781266800.000001"
+ }
+]

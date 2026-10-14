@@ -1,0 +1,35 @@
+[
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Can someone from Data look at the events-pipeline dashboard? p99 creeping up.",
+  "ts": "1778058240.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Thanks!",
+  "ts": "1778058540.000001",
+  "thread_ts": "1778058240.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "Can someone from Product look at the auth-service dashboard? p99 creeping up.",
+  "ts": "1778078760.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
+  "text": "Looking now.",
+  "ts": "1778079060.000001",
+  "thread_ts": "1778078760.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "👍",
+  "ts": "1778079600.000001",
+  "thread_ts": "1778078760.000001"
+ }
+]

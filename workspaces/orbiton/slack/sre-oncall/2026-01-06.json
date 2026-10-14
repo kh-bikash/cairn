@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Paged for payments-service latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1767691440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Can you share the dashboard link?",
+  "ts": "1767691740.000001",
+  "thread_ts": "1767691440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Can someone from Data look at the warehouse-db dashboard? p99 creeping up.",
+  "ts": "1767708300.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Looking now.",
+  "ts": "1767708600.000001",
+  "thread_ts": "1767708300.000001"
+ }
+]

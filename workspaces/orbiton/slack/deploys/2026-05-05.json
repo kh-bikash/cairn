@@ -1,0 +1,21 @@
+[
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "feature-flags v4.27.0 is live in staging, prod tomorrow.",
+  "ts": "1777977060.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Deployed payments-service v3.27.6 to production.",
+  "ts": "1777983060.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Thanks!",
+  "ts": "1777983360.000001",
+  "thread_ts": "1777983060.000001"
+ }
+]

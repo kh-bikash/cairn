@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1789981080.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01012",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1790006400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Can you share the dashboard link?",
+  "ts": "1790006700.000001",
+  "thread_ts": "1790006400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "Done.",
+  "ts": "1790007240.000001",
+  "thread_ts": "1790006400.000001"
+ }
+]

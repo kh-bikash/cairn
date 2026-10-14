@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Can someone from Payments look at the ledger-db dashboard? p99 creeping up.",
+  "ts": "1771924980.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Done.",
+  "ts": "1771925280.000001",
+  "thread_ts": "1771924980.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "👍",
+  "ts": "1771925820.000001",
+  "thread_ts": "1771924980.000001"
+ }
+]

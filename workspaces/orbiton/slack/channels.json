@@ -1,0 +1,79 @@
+[
+ {
+  "id": "C00000",
+  "name": "arch-review",
+  "purpose": {
+   "value": "Architecture review requests and outcomes"
+  }
+ },
+ {
+  "id": "C00001",
+  "name": "data",
+  "purpose": {
+   "value": "Data team"
+  }
+ },
+ {
+  "id": "C00002",
+  "name": "deploys",
+  "purpose": {
+   "value": "Deploy notifications"
+  }
+ },
+ {
+  "id": "C00003",
+  "name": "general",
+  "purpose": {
+   "value": "Company-wide"
+  }
+ },
+ {
+  "id": "C00004",
+  "name": "incidents",
+  "purpose": {
+   "value": "Live incidents"
+  }
+ },
+ {
+  "id": "C00005",
+  "name": "mobile",
+  "purpose": {
+   "value": "Driver app"
+  }
+ },
+ {
+  "id": "C00006",
+  "name": "notifications",
+  "purpose": {
+   "value": ""
+  }
+ },
+ {
+  "id": "C00007",
+  "name": "payments",
+  "purpose": {
+   "value": "Payments team"
+  }
+ },
+ {
+  "id": "C00008",
+  "name": "platform",
+  "purpose": {
+   "value": "Platform team: event bus, auth, flags"
+  }
+ },
+ {
+  "id": "C00009",
+  "name": "routing",
+  "purpose": {
+   "value": "Routing and dispatch"
+  }
+ },
+ {
+  "id": "C00010",
+  "name": "sre-oncall",
+  "purpose": {
+   "value": "On-call coordination"
+  }
+ }
+]

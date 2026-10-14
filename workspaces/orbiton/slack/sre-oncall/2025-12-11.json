@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01014",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on warehouse-db.",
+  "ts": "1765469640.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "Can you share the dashboard link?",
+  "ts": "1765469940.000001",
+  "thread_ts": "1765469640.000001"
+ }
+]

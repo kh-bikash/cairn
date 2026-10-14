@@ -1,0 +1,21 @@
+[
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Rolling back notifications-service v2.3.9: error rate up after deploy.",
+  "ts": "1762341780.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01014",
+  "text": "Deployed notifications-service v4.21.8 to production.",
+  "ts": "1762357020.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "Ack.",
+  "ts": "1762357320.000001",
+  "thread_ts": "1762357020.000001"
+ }
+]

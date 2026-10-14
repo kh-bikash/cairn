@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1780064580.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01014",
+  "text": "Can you share the dashboard link?",
+  "ts": "1780064880.000001",
+  "thread_ts": "1780064580.000001"
+ }
+]

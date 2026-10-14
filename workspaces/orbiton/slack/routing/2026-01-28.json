@@ -1,0 +1,29 @@
+[
+ {
+  "type": "message",
+  "user": "U01022",
+  "text": "Customers keep complaining about missed delivery windows. Ops says 18% of routes violate a time window.",
+  "ts": "1769594400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "The greedy heuristic doesn't model hard time windows at all. I've been prototyping with OR-Tools: it solves our 500-stop benchmark in 4.2s with zero violations.",
+  "ts": "1769595840.000001",
+  "thread_ts": "1769594400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "What about Gurobi? It's faster.",
+  "ts": "1769596620.000001",
+  "thread_ts": "1769594400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "License is around $60k/yr and we don't need its edge yet. I'll write RFC-0007.",
+  "ts": "1769598060.000001",
+  "thread_ts": "1769594400.000001"
+ }
+]

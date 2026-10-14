@@ -1,4 +1,4 @@
-"""HTTP API: streaming agent answers (SSE), direct tool calls for dashboard panels, and graph browsing."""
+"""HTTP API: streaming agent answers (SSE), browsable decisions/people/systems, approvals and repository sync."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -17,9 +17,12 @@ from pydantic import BaseModel, Field
 from cairn.actions.service import ActionError, ActionService
 from cairn.agent.loop import Agent
 from cairn.agent.tools import TOOL_SPECS, ToolError, Tools, dispatch
+from cairn.api import catalog
+from cairn.api.security import RateLimiter, client_key, require_admin
 from cairn.config import Settings, get_settings
 from cairn.graph.client import GraphStore, SubGraph
 from cairn.llm.client import LLM
+from cairn.sync import SyncError, SyncManager, snapshot_repos
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +43,10 @@ class RouteIssueRequest(BaseModel):
     number: int = Field(ge=1)
 
 
+class SyncRequest(BaseModel):
+    repos: list[str] = Field(min_length=1, max_length=10)
+
+
 class WikiRequest(BaseModel):
     reason: str = Field(default="Refresh the knowledge base from the graph", max_length=500)
 
@@ -52,6 +59,8 @@ class State:
         self.agent = Agent(self.store, self.llm, settings)
         self.tools = Tools(self.store)
         self.actions = ActionService(self.store, settings)
+        self.sync = SyncManager(self.store, self.llm, settings)
+        self.ask_limiter = RateLimiter(settings.ask_rate_limit_per_minute, 60.0)
 
 
 @asynccontextmanager
@@ -87,7 +96,8 @@ def create_app() -> FastAPI:
             "ok": ok,
             "graph": s.store.name,
             "llm": {role: {"model": getattr(s.settings, f"model_{role}"), "ready": s.llm.available(role)} for role in ("decide", "extract", "agent")},
-            "repos": s.settings.repos,
+            "repos": snapshot_repos(s.settings) or s.settings.repos,
+            "admin_required": s.settings.admin_token is not None,
         }
 
     @app.get("/api/stats")
@@ -108,6 +118,7 @@ def create_app() -> FastAPI:
     @app.post("/api/ask")
     async def ask(body: AskRequest, request: Request) -> StreamingResponse:
         s = st(request)
+        s.ask_limiter.check(client_key(request))
 
         async def events() -> AsyncIterator[bytes]:
             try:
@@ -217,21 +228,77 @@ def create_app() -> FastAPI:
         items = await asyncio.to_thread(s.actions.list)
         return {"actions": [a.public() for a in items], "allowed_repos": s.settings.action_repos, "wiki_repo": s.settings.wiki_repo}
 
-    @app.post("/api/actions/wiki")
+    @app.post("/api/actions/wiki", dependencies=[Depends(require_admin)])
     async def propose_wiki(body: WikiRequest, request: Request) -> dict[str, Any]:
         return await _act(st(request).actions.propose_wiki_update, body.reason)
 
-    @app.post("/api/actions/route-issue")
+    @app.post("/api/actions/route-issue", dependencies=[Depends(require_admin)])
     async def propose_route(body: RouteIssueRequest, request: Request) -> dict[str, Any]:
         return await _act(st(request).actions.propose_issue_routing, body.repo, body.number)
 
-    @app.post("/api/actions/{uid}/approve")
+    @app.post("/api/actions/{uid}/approve", dependencies=[Depends(require_admin)])
     async def approve_action(uid: str, request: Request) -> dict[str, Any]:
         return await _act(st(request).actions.approve, uid)
 
-    @app.post("/api/actions/{uid}/reject")
+    @app.post("/api/actions/{uid}/reject", dependencies=[Depends(require_admin)])
     async def reject_action(uid: str, request: Request) -> dict[str, Any]:
         return await _act(st(request).actions.reject, uid)
+
+    # ------------------------------------------------------------------ browsable knowledge
+    @app.get("/api/workspace")
+    async def workspace(request: Request) -> dict[str, Any]:
+        s = st(request)
+        info = await asyncio.to_thread(catalog.workspace, s.store)
+        return {**info, "suggestions": await asyncio.to_thread(catalog.suggestions, s.store)}
+
+    @app.get("/api/decisions")
+    async def decisions(request: Request, q: str | None = None, repo: str | None = None, drift: bool = False, limit: int = 50, offset: int = 0) -> dict[str, Any]:
+        s = st(request)
+        return await asyncio.to_thread(catalog.list_decisions, s.store, q=q, repo=repo, drift_only=drift, limit=min(limit, 200), offset=max(offset, 0))
+
+    @app.get("/api/decisions/{uid:path}")
+    async def decision(uid: str, request: Request) -> dict[str, Any]:
+        found = await asyncio.to_thread(catalog.decision_detail, st(request).store, uid)
+        if found is None:
+            raise HTTPException(404, "decision not found")
+        return found
+
+    @app.get("/api/people")
+    async def people(request: Request, q: str | None = None, limit: int = 60) -> dict[str, Any]:
+        return await asyncio.to_thread(catalog.list_people, st(request).store, q=q, limit=min(limit, 200))
+
+    @app.get("/api/people/{handle}")
+    async def person(handle: str, request: Request) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(catalog.person_detail, st(request).store, handle)
+        except ToolError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.get("/api/systems")
+    async def systems(request: Request) -> dict[str, Any]:
+        return await asyncio.to_thread(catalog.list_systems, st(request).store)
+
+    @app.get("/api/systems/{key:path}")
+    async def system(key: str, request: Request) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(catalog.system_detail, st(request).store, key)
+        except ToolError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    # ------------------------------------------------------------------ repository sync
+    @app.get("/api/sync")
+    async def sync_status(request: Request) -> dict[str, Any]:
+        s = st(request)
+        job = s.sync.latest()
+        return {"job": job.public() if job else None, "repos": snapshot_repos(s.settings), "github_ready": bool(s.settings.resolve_github_token())}
+
+    @app.post("/api/sync", dependencies=[Depends(require_admin)])
+    async def sync_start(body: SyncRequest, request: Request) -> dict[str, Any]:
+        try:
+            job = st(request).sync.start(body.repos)
+        except SyncError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {"job": job.public()}
 
     @app.get("/api/answers")
     async def answers(request: Request, limit: int = 20) -> list[dict[str, Any]]:

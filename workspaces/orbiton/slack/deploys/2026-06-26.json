@@ -1,0 +1,42 @@
+[
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Deployed auth-service v4.17.3 to production.",
+  "ts": "1782472500.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Done.",
+  "ts": "1782472800.000001",
+  "thread_ts": "1782472500.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Can you share the dashboard link?",
+  "ts": "1782473340.000001",
+  "thread_ts": "1782472500.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Rolling back events-pipeline v4.25.4: error rate up after deploy.",
+  "ts": "1782499380.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "On it.",
+  "ts": "1782499680.000001",
+  "thread_ts": "1782499380.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Can you share the dashboard link?",
+  "ts": "1782500220.000001",
+  "thread_ts": "1782499380.000001"
+ }
+]

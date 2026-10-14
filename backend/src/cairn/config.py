@@ -75,6 +75,10 @@ class Settings(BaseSettings):
     decide_confidence_threshold: float = 0.7
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:5173"])
 
+    # Public deployment: when set, every write endpoint requires `Authorization: Bearer <token>`.
+    admin_token: SecretStr | None = None
+    ask_rate_limit_per_minute: int = 20
+
     # Writes (comments, wiki PRs) are only ever allowed against these repos.
     action_repos: Annotated[list[str], NoDecode] = Field(default_factory=list)
     wiki_repo: str | None = None

@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Rolling back dispatch-api v4.6.9: error rate up after deploy.",
+  "ts": "1779189000.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Same here.",
+  "ts": "1779189300.000001",
+  "thread_ts": "1779189000.000001"
+ }
+]

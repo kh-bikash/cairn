@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Can someone from Data look at the warehouse-db dashboard? p99 creeping up.",
+  "ts": "1770058560.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Done.",
+  "ts": "1770058860.000001",
+  "thread_ts": "1770058560.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "On it.",
+  "ts": "1770059400.000001",
+  "thread_ts": "1770058560.000001"
+ }
+]

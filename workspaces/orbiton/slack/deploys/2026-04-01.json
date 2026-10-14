@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "ledger-db v1.0.1 is live in staging, prod tomorrow.",
+  "ts": "1775039580.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Can you share the dashboard link?",
+  "ts": "1775039880.000001",
+  "thread_ts": "1775039580.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Thanks!",
+  "ts": "1775040420.000001",
+  "thread_ts": "1775039580.000001"
+ }
+]

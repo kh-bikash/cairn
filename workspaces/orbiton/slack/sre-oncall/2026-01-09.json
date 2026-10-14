@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on checkout-api.",
+  "ts": "1767973980.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01013",
+  "text": "On it.",
+  "ts": "1767974280.000001",
+  "thread_ts": "1767973980.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Looking now.",
+  "ts": "1767974820.000001",
+  "thread_ts": "1767973980.000001"
+ }
+]

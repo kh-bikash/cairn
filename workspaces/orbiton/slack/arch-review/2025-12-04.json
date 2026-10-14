@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "ADR-0003 (Kafka for events-pipeline) approved in today's review. Priya owns the rollout.",
+  "ts": "1764860400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01000",
+  "text": "Approved from my side. Please make sure on-call has a runbook before we put payments events on it.",
+  "ts": "1764861840.000001",
+  "thread_ts": "1764860400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "Runbook is in docs/runbooks/events-pipeline.md, I'll walk SRE through it next week.",
+  "ts": "1764862620.000001",
+  "thread_ts": "1764860400.000001"
+ }
+]

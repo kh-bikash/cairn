@@ -1,0 +1,21 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Paged for checkout-api latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1767775140.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on route-optimizer.",
+  "ts": "1767791220.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Can you share the dashboard link?",
+  "ts": "1767791520.000001",
+  "thread_ts": "1767791220.000001"
+ }
+]

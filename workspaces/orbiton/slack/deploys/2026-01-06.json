@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "Deployed analytics-warehouse v2.19.6 to production.",
+  "ts": "1767721440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "Ack.",
+  "ts": "1767721740.000001",
+  "thread_ts": "1767721440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "Can you share the dashboard link?",
+  "ts": "1767722280.000001",
+  "thread_ts": "1767721440.000001"
+ }
+]

@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on auth-service.",
+  "ts": "1778585100.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on payments-service.",
+  "ts": "1778593620.000001"
+ }
+]

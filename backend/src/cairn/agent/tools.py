@@ -53,6 +53,9 @@ def ft_query(text: str, *, prefix: bool = True) -> str:
     return "|".join(f"{w}*" if prefix and len(w) > 3 else w for w in words[:8])
 
 
+# How a source relates to a system: code it changed, systems it talks about, or the repo it lives in.
+_SYSTEM_LINKS = "TOUCHES|MENTIONS|IN_REPO"
+_ACTIVITY_KINDS = ("authored", "reviewed", "merged", "commented", "discussed", "worked", "wrote", "chatted", "decided")
 _WORD = re.compile(r"[a-z][a-z0-9_]{2,}")
 _TOPIC_STOP = frozenset(
     [
@@ -418,53 +421,58 @@ class Tools:
         people = self.store.records(
             """
             MATCH (p:Person)-[k:KNOWS_ABOUT]->(s:System {key: $key})
-            OPTIONAL MATCH (p)-[o:OWNS]->(s)
-            RETURN p.handle AS handle, p.name AS name, k.score AS score, k.authored AS authored, k.reviewed AS reviewed,
-                   k.merged AS merged, k.commented AS commented, k.discussed AS discussed, k.last_ts AS last_ts, o.via AS owns
+            RETURN p.handle AS handle, p.name AS name, p.role AS role, p.team AS team, p.left AS left,
+                   k.score AS score, properties(k) AS activity, k.last_ts AS last_ts
             ORDER BY k.score DESC LIMIT $k
             """,
-            {"key": target["key"], "k": limit},
+            {"key": target["key"], "k": limit + 3},
         )
+        owning = self.store.records("MATCH (t:Team)-[:OWNS]->(:System {key: $key}) RETURN t.name AS name", {"key": target["key"]})
         if not people:
             return ToolResult({"system": target, "experts": [], "note": "no recorded activity on this system"}, "no experts found", sg)
         total = sum(p["score"] for p in people) or 1.0
         evidence: list[Evidence] = []
         experts = []
-        # Module-level systems: evidence is PRs touching it. Repo-level: PRs in the repo.
-        touch = "(s)-[:TOUCHES]->(:System {key: $key})" if target["kind"] != "repo" else "(s)-[:IN_REPO]->(:System {key: $key})"
         for p in people:
-            pid = sg.node("Person", p["handle"], name=p["name"] or p["handle"])
+            pid = sg.node("Person", p["handle"], name=p["name"] or p["handle"], left=p["left"])
             sg.edge(pid, "KNOWS_ABOUT", sid, score=p["score"])
-            prs = self.store.records(
+            work = self.store.records(
                 f"""
-                MATCH (:Person {{handle: $h}})-[r:AUTHORED|REVIEWED]->(s:Source {{kind: 'pr'}}) WHERE {touch}
+                MATCH (:Person {{handle: $h}})-[r:AUTHORED|REVIEWED|ASSIGNED]->(s:Source)-[:{_SYSTEM_LINKS}]->(:System {{key: $key}})
+                WHERE NOT (s)-[:REPLY_TO]->()
                 WITH s, collect(type(r)) AS roles
-                RETURN s.uid AS uid, s.title AS title, s.url AS url, s.ts AS ts,
-                       CASE WHEN 'AUTHORED' IN roles THEN 'AUTHORED' ELSE 'REVIEWED' END AS role
-                ORDER BY ts DESC LIMIT 3
+                RETURN s.uid AS uid, s.title AS title, s.url AS url, s.ts AS ts, s.kind AS kind, roles,
+                       CASE s.kind WHEN 'thread' THEN 1 ELSE 0 END AS chat
+                ORDER BY chat, ts DESC LIMIT 3
                 """,
                 {"h": p["handle"], "key": target["key"]},
             )
-            for pr in prs:
-                prid = sg.node("Source", pr["uid"], kind="pr", title=pr["title"], ts=pr["ts"], url=pr["url"])
-                sg.edge(pid, pr["role"], prid)
-                sg.edge(prid, "TOUCHES" if target["kind"] != "repo" else "IN_REPO", sid)
-                evidence.append(Evidence(pr["uid"], pr["title"], pr["url"], "pr", pr["ts"]))
+            for w in work:
+                wid = sg.node("Source", w["uid"], kind=w["kind"], title=w["title"], ts=w["ts"], url=w["url"])
+                sg.edge(pid, "AUTHORED" if "AUTHORED" in w["roles"] else w["roles"][0], wid)
+                sg.edge(wid, "TOUCHES", sid)
+                evidence.append(Evidence(w["uid"], w["title"], w["url"], w["kind"], w["ts"]))
+            act = p["activity"] or {}
             experts.append(
                 {
                     "handle": p["handle"],
                     "name": p["name"],
+                    "role": p["role"],
+                    "team": p["team"],
+                    "left_company": fmt_date(p["left"]),
                     "share": round(p["score"] / total, 2),
-                    "authored_prs": p["authored"],
-                    "reviewed_prs": p["reviewed"],
-                    "merged_prs": p["merged"],
-                    "comments": p["commented"],
+                    "activity": {k: act[k] for k in _ACTIVITY_KINDS if act.get(k)},
                     "last_active": fmt_date(p["last_ts"]),
-                    "codeowner": p["owns"],
-                    "recent_prs": [{"uid": x["uid"], "title": x["title"], "role": x["role"].lower(), "date": fmt_date(x["ts"])} for x in prs],
+                    "recent_work": [{"uid": w["uid"], "title": w["title"], "kind": w["kind"], "date": fmt_date(w["ts"])} for w in work],
                 }
             )
-        return ToolResult({"system": target, "experts": experts}, f"{len(experts)} experts on {target['key']}", sg, evidence)
+        # People who left can't be asked: keep them visible (their knowledge is a risk) but list current staff.
+        current = [e for e in experts if not e["left_company"]][:limit]
+        departed = [e for e in experts if e["left_company"]]
+        data: dict[str, Any] = {"system": target, "experts": current, "owning_team": [o["name"] for o in owning]}
+        if departed:
+            data["departed_experts"] = [{"handle": e["handle"], "left_company": e["left_company"], "share": e["share"]} for e in departed]
+        return ToolResult(data, f"{len(current)} experts on {target['key']}", sg, evidence)
 
     def impact(self, system: str) -> ToolResult:
         """What depends on this system, who to call, and what is in flight."""
@@ -474,7 +482,7 @@ class Tools:
         rid = sg.node("System", repo, name=repo, kind="repo")
         if target["key"] != repo:
             sg.edge(sg.node("System", target["key"], name=target["key"], kind=target["kind"]), "PART_OF", rid)
-        dependents = self.store.records(
+        raw = self.store.records(
             """
             MATCH path = (d:System)-[:DEPENDS_ON*1..4]->(:System {key: $repo})
             RETURN d.key AS key, length(path) AS hops, [r IN relationships(path) | r.via] AS via
@@ -482,17 +490,20 @@ class Tools:
             """,
             {"repo": repo},
         )
+        dependents: list[dict[str, Any]] = []
+        for d in raw:  # several paths can reach the same dependent; keep the shortest
+            if all(x["key"] != d["key"] for x in dependents):
+                dependents.append(d)
         dependencies = self.store.records("MATCH (:System {key: $repo})-[r:DEPENDS_ON]->(d:System) RETURN d.key AS key, r.via AS via", {"repo": repo})
         affected = [repo] + [d["key"] for d in dependents]
         for d in dependents:
             sg.edge(sg.node("System", d["key"], name=d["key"], kind="repo"), "DEPENDS_ON", rid, via=d["via"][-1] if d["via"] else None)
         for d in dependencies:
             sg.edge(rid, "DEPENDS_ON", sg.node("System", d["key"], name=d["key"], kind="repo"), via=d["via"])
-
         contacts = self.store.records(
             """
             UNWIND $repos AS rk
-            MATCH (p:Person)-[k:KNOWS_ABOUT]->(:System {key: rk})
+            MATCH (p:Person)-[k:KNOWS_ABOUT]->(:System {key: rk}) WHERE p.left IS NULL
             WITH rk, p, k ORDER BY k.score DESC
             WITH rk, collect({handle: p.handle, score: k.score})[0..2] AS top
             RETURN rk AS repo, top
@@ -502,21 +513,23 @@ class Tools:
         for c in contacts:
             for t in c["top"]:
                 sg.edge(sg.node("Person", t["handle"], name=t["handle"]), "KNOWS_ABOUT", f"System:{c['repo']}")
+        teams = self.store.records("MATCH (t:Team)-[:OWNS]->(s:System) WHERE s.key IN $repos RETURN s.key AS key, t.name AS team", {"repos": affected})
         open_items = self.store.records(
-            """
-            MATCH (s:Source)-[:IN_REPO]->(r:System) WHERE r.key IN $repos AND s.kind IN ['issue', 'pr'] AND s.state = 'open'
-            RETURN r.key AS repo, s.uid AS uid, s.kind AS kind, s.title AS title, s.url AS url, s.ts AS ts
-            ORDER BY s.ts DESC LIMIT 12
+            f"""
+            MATCH (s:Source)-[:{_SYSTEM_LINKS}]->(r:System)
+            WHERE r.key IN $repos AND s.kind IN ['issue', 'pr', 'ticket'] AND toLower(s.state) IN ['open', 'to do', 'in progress', 'reopened']
+            RETURN DISTINCT r.key AS repo, s.uid AS uid, s.kind AS kind, s.title AS title, s.url AS url, s.ts AS ts
+            ORDER BY ts DESC LIMIT 12
             """,
             {"repos": affected},
         )
         evidence = [Evidence(o["uid"], o["title"], o["url"], o["kind"], o["ts"]) for o in open_items]
         for o in open_items:
-            sg.edge(sg.node("Source", o["uid"], kind=o["kind"], title=o["title"], ts=o["ts"], url=o["url"]), "IN_REPO", f"System:{o['repo']}")
+            sg.edge(sg.node("Source", o["uid"], kind=o["kind"], title=o["title"], ts=o["ts"], url=o["url"]), "TOUCHES", f"System:{o['repo']}")
         decisions = self.store.records(
             """
             MATCH (d:Decision)-[:AFFECTS]->(s:System) WHERE s.key IN $keys
-            RETURN DISTINCT d.uid AS uid, d.title AS title, d.ts AS ts, d.drift AS drift ORDER BY d.ts DESC LIMIT 8
+            RETURN DISTINCT d.uid AS uid, d.title AS title, d.ts AS ts, d.drift AS drift ORDER BY ts DESC LIMIT 8
             """,
             {"keys": [target["key"], *affected]},
         )
@@ -528,72 +541,113 @@ class Tools:
             "depended_on_by": [{"repo": d["key"], "hops": d["hops"], "via_package": d["via"]} for d in dependents],
             "depends_on": dependencies,
             "contacts": {c["repo"]: [t["handle"] for t in c["top"]] for c in contacts},
+            "owning_teams": {t["key"]: t["team"] for t in teams},
             "open_items": [{"uid": o["uid"], "kind": o["kind"], "title": o["title"], "date": fmt_date(o["ts"])} for o in open_items],
             "relevant_decisions": [{"uid": d["uid"], "title": d["title"], "date": fmt_date(d["ts"]), "drift": bool(d["drift"])} for d in decisions],
         }
         return ToolResult(data, f"{len(dependents)} dependents, {len(open_items)} open items", sg, evidence)
 
     def bus_factor(self, repo: str | None = None, min_share: float = 0.2) -> ToolResult:
-        """Modules where knowledge is concentrated in one or two people, plus who would leave the biggest gap."""
+        """Where knowledge is concentrated in one person, and where the top expert has already left."""
+        # Leaf systems: code modules, or top-level systems without modules of their own (services).
         rows = self.store.records(
             """
-            MATCH (p:Person)-[k:KNOWS_ABOUT]->(s:System {kind: 'code'})
-            WHERE $repo IS NULL OR s.repo = $repo
-            WITH s, p, k ORDER BY k.score DESC
-            WITH s, collect({handle: p.handle, score: k.score}) AS people, sum(k.score) AS total
-            MATCH (:Source)-[t:TOUCHES]->(s)
-            WITH s, people, total, count(t) AS prs WHERE prs >= 3
-            RETURN s.key AS key, s.repo AS repo, people, total, prs
+            MATCH (p:Person)-[k:KNOWS_ABOUT]->(s:System)
+            WHERE (s.kind = 'code' OR (s.kind = 'repo' AND NOT ()-[:PART_OF]->(s))) AND ($repo IS NULL OR s.repo = $repo)
+            RETURN s.key AS key, p.handle AS handle, p.left AS left, k.score AS score, coalesce(k.lifetime, k.score) AS lifetime
             """,
             {"repo": repo},
             timeout_ms=30_000,
         )
-        sg = SubGraph()
-        modules = []
-        sole: dict[str, list[str]] = {}
+        by_sys: dict[str, list[dict[str, Any]]] = {}
         for r in rows:
-            significant = [p for p in r["people"] if p["score"] / (r["total"] or 1) >= min_share]
-            top = r["people"][0]
-            top_share = top["score"] / (r["total"] or 1)
-            factor = len(significant)
-            if factor <= 1 or top_share >= 0.6:
-                modules.append(
+            by_sys.setdefault(r["key"], []).append(r)
+        activity = {
+            r["key"]: r["n"]
+            for r in self.store.records(
+                f"MATCH (x:Source)-[:{_SYSTEM_LINKS}]->(s:System) WHERE s.key IN $keys AND NOT (x)-[:REPLY_TO]->() "
+                "RETURN s.key AS key, count(DISTINCT x) AS n",
+                {"keys": list(by_sys)},
+            )
+        }
+        sg = SubGraph()
+        at_risk = []
+        sole: dict[str, list[str]] = {}
+        departed: dict[str, dict[str, Any]] = {}
+        diffuse: list[dict[str, Any]] = []
+        for key, people in by_sys.items():
+            if activity.get(key, 0) < 3:
+                continue
+            people.sort(key=lambda r: -r["score"])
+            total = sum(p["score"] for p in people) or 1.0
+            top = people[0]
+            current = [p for p in people if not p["left"]]
+            cur_total = sum(p["score"] for p in current) or 1.0
+            significant = [p for p in current if p["score"] / cur_total >= min_share]
+            top_share = top["score"] / total
+            expert_left = bool(top["left"])
+            # Knowledge that left: anyone gone who held a large share of all-time activity on this system.
+            lifetime_total = sum(p["lifetime"] for p in people) or 1.0
+            for p in people:
+                if p["left"] and p["lifetime"] / lifetime_total >= 0.2:
+                    entry = departed.setdefault(p["handle"], {"handle": p["handle"], "left_company": fmt_date(p["left"]), "systems": []})
+                    entry["systems"].append({"system": key, "all_time_share": round(p["lifetime"] / lifetime_total, 2), "now_held_by": current[0]["handle"] if current else None})
+            # Risk = the top expert has left, or knowledge sits with exactly one current person. Knowledge spread
+            # thinly across many people (no one above 20%) is diffuse ownership, reported separately.
+            if not significant and not expert_left:
+                diffuse.append({"system": key, "people": len(current), "activity": activity.get(key, 0)})
+                continue
+            if expert_left or len(significant) == 1 or top_share >= 0.6:
+                successor = next((p["handle"] for p in current if p["handle"] != top["handle"]), None)
+                at_risk.append(
                     {
-                        "system": r["key"],
-                        "bus_factor": max(1, factor),
+                        "system": key,
+                        "bus_factor": len(significant),
                         "top_expert": top["handle"],
                         "top_share": round(top_share, 2),
-                        "prs": r["prs"],
+                        "top_expert_left": fmt_date(top["left"]) if expert_left else None,
+                        "next_best": successor,
+                        "activity": activity.get(key, 0),
                     }
                 )
-                sole.setdefault(top["handle"], []).append(r["key"])
-                sid = sg.node("System", r["key"], name=r["key"], kind="code", risk=round(top_share, 2))
-                sg.edge(sg.node("Person", top["handle"], name=top["handle"]), "KNOWS_ABOUT", sid, score=top["score"])
-        modules.sort(key=lambda m: (-m["top_share"], -m["prs"]))
-        # Betweenness over the expertise graph: people who bridge otherwise separate parts of the codebase.
+                sole.setdefault(top["handle"], []).append(key)
+                sid = sg.node("System", key, name=key, risk=round(top_share, 2))
+                sg.edge(sg.node("Person", top["handle"], name=top["handle"], left=top["left"]), "KNOWS_ABOUT", sid, score=top["score"])
+        at_risk.sort(key=lambda m: (m["top_expert_left"] is None, m["bus_factor"], -m["top_share"]))
         bridges = self.store.records(
             """
             CALL algo.betweenness({nodeLabels: ['Person', 'System'], relationshipTypes: ['KNOWS_ABOUT'], samplingSize: 64, samplingSeed: 7})
             YIELD node, score
-            WITH node, score WHERE 'Person' IN labels(node) AND score > 0
+            WITH node, score WHERE 'Person' IN labels(node) AND score > 0 AND node.left IS NULL
             RETURN node.handle AS handle, score ORDER BY score DESC LIMIT 5
             """,
             timeout_ms=30_000,
         )
         concentration = sorted(({"handle": h, "sole_expert_on": ks} for h, ks in sole.items()), key=lambda x: -len(x["sole_expert_on"]))
         data = {
-            "at_risk_modules": modules[:15],
+            "at_risk_modules": at_risk[:15],
+            "departed_experts": list(departed.values()),
             "knowledge_concentration": concentration[:8],
+            "no_clear_owner": sorted(diffuse, key=lambda d: -d["activity"])[:8],
             "bridge_people": [{"handle": b["handle"], "betweenness": round(b["score"], 2)} for b in bridges],
-            "method": "bus factor = people holding >= 20% of the module's recency-weighted activity",
+            "method": "bus factor = current people holding >= 20% of a system's recency-weighted activity; flags systems whose top expert left",
         }
-        return ToolResult(data, f"{len(modules)} at-risk modules", sg)
+        return ToolResult(data, f"{len(at_risk)} at-risk systems", sg)
 
     def person_profile(self, handle: str) -> ToolResult:
-        """What someone knows, decided and is working on — also the basis for a handoff pack."""
+        """What someone knows, decided and is working on; also the basis for a handoff pack."""
         person = self.resolve_person(handle)
         sg = SubGraph()
-        pid = sg.node("Person", person["handle"], name=person["name"] or person["handle"])
+        meta = self.store.records(
+            """
+            MATCH (p:Person {handle: $h})
+            OPTIONAL MATCH (p)-[:REPORTS_TO]->(m:Person)
+            OPTIONAL MATCH (p)-[:MEMBER_OF]->(t:Team)
+            RETURN p.role AS role, p.left AS left, p.joined AS joined, m.handle AS manager, t.name AS team
+            """,
+            {"h": person["handle"]},
+        )[0]
+        pid = sg.node("Person", person["handle"], name=person["name"] or person["handle"], left=meta["left"])
         knows = self.store.records(
             """
             MATCH (:Person {handle: $h})-[k:KNOWS_ABOUT]->(s:System)
@@ -608,15 +662,16 @@ class Tools:
         for k in knows:
             sg.edge(pid, "KNOWS_ABOUT", sg.node("System", k["key"], name=k["key"], kind=k["kind"]), score=k["score"])
         decided = self.store.records(
-            "MATCH (:Person {handle: $h})-[:DECIDED]->(d:Decision) RETURN d.uid AS uid, d.title AS title, d.ts AS ts ORDER BY d.ts DESC LIMIT 8",
+            "MATCH (:Person {handle: $h})-[:DECIDED]->(d:Decision) RETURN d.uid AS uid, d.title AS title, d.ts AS ts ORDER BY ts DESC LIMIT 8",
             {"h": person["handle"]},
         )
         for d in decided:
             sg.edge(pid, "DECIDED", sg.node("Decision", d["uid"], title=d["title"], ts=d["ts"]))
         active = self.store.records(
             """
-            MATCH (:Person {handle: $h})-[:AUTHORED|ASSIGNED]->(s:Source) WHERE s.kind IN ['pr', 'issue'] AND s.state = 'open'
-            RETURN s.uid AS uid, s.kind AS kind, s.title AS title, s.url AS url, s.ts AS ts ORDER BY s.ts DESC LIMIT 8
+            MATCH (:Person {handle: $h})-[:AUTHORED|ASSIGNED]->(s:Source)
+            WHERE s.kind IN ['pr', 'issue', 'ticket'] AND toLower(s.state) IN ['open', 'to do', 'in progress', 'reopened']
+            RETURN s.uid AS uid, s.kind AS kind, s.title AS title, s.url AS url, s.ts AS ts ORDER BY ts DESC LIMIT 8
             """,
             {"h": person["handle"]},
         )
@@ -624,31 +679,31 @@ class Tools:
         for a in active:
             sg.edge(pid, "AUTHORED", sg.node("Source", a["uid"], kind=a["kind"], title=a["title"], ts=a["ts"], url=a["url"]))
         data = {
-            "person": person,
+            "person": {**person, "role": meta["role"], "team": meta["team"], "manager": meta["manager"], "left_company": fmt_date(meta["left"])},
             "expertise": [{"system": k["key"], "share_of_knowledge": round(k["share"] or 0, 2), "last_active": fmt_date(k["last_ts"])} for k in knows],
             "decisions": [{"uid": d["uid"], "title": d["title"], "date": fmt_date(d["ts"])} for d in decided],
             "open_work": [{"uid": a["uid"], "kind": a["kind"], "title": a["title"]} for a in active],
-            "would_leave_gap_in": [k["key"] for k in knows if (k["share"] or 0) >= 0.5],
+            "would_leave_gap_in": [k["key"] for k in knows if (k["share"] or 0) >= 0.3],
         }
         return ToolResult(data, f"profile of {person['handle']}", sg, evidence)
 
     def timeline(self, system: str, since: str | None = None, until: str | None = None, limit: int = 15) -> ToolResult:
-        """What happened to a system in a time window (merged PRs, issues, decisions) — the 'as of' view."""
+        """What happened to a system in a time window (PRs, tickets, threads, docs, decisions): the 'as of' view."""
         target = self.resolve_system(system)
         lo, hi = parse_date(since) or 0, parse_date(until) or 2**62
-        rel = "(s)-[:TOUCHES]->(:System {key: $key})" if target["kind"] != "repo" else "(s)-[:IN_REPO]->(:System {key: $key})"
         events = self.store.records(
             f"""
-            MATCH (s:Source) WHERE s.kind IN ['pr', 'issue', 'discussion'] AND s.ts >= $lo AND s.ts <= $hi AND {rel}
-            RETURN s.uid AS uid, s.kind AS kind, s.title AS title, s.url AS url, s.ts AS ts, s.state AS state, s.author AS author
-            ORDER BY s.ts DESC LIMIT $k
+            MATCH (s:Source)-[:{_SYSTEM_LINKS}]->(:System {{key: $key}})
+            WHERE s.ts >= $lo AND s.ts <= $hi AND NOT (s)-[:REPLY_TO]->()
+            RETURN DISTINCT s.uid AS uid, s.kind AS kind, s.title AS title, s.url AS url, s.ts AS ts, s.state AS state, s.author AS author
+            ORDER BY ts DESC LIMIT $k
             """,
             {"key": target["key"], "lo": lo, "hi": hi, "k": limit},
         )
         decisions = self.store.records(
             """
             MATCH (d:Decision)-[:AFFECTS]->(:System {key: $key}) WHERE d.ts >= $lo AND d.ts <= $hi
-            RETURN d.uid AS uid, d.title AS title, d.ts AS ts ORDER BY d.ts DESC LIMIT 10
+            RETURN d.uid AS uid, d.title AS title, d.ts AS ts ORDER BY ts DESC LIMIT 10
             """,
             {"key": target["key"], "lo": lo, "hi": hi},
         )
@@ -663,15 +718,7 @@ class Tools:
             "system": target["key"],
             "window": {"since": since, "until": until},
             "events": [
-                {
-                    "uid": e["uid"],
-                    "kind": e["kind"],
-                    "title": e["title"],
-                    "date": fmt_date(e["ts"]),
-                    "state": e["state"],
-                    "author": e["author"],
-                }
-                for e in events
+                {"uid": e["uid"], "kind": e["kind"], "title": e["title"], "date": fmt_date(e["ts"]), "state": e["state"], "author": e["author"]} for e in events
             ],
             "decisions": [{"uid": d["uid"], "title": d["title"], "date": fmt_date(d["ts"])} for d in decisions],
         }
@@ -762,15 +809,16 @@ class Tools:
 
         weights: dict[str, float] = {}
         mentioned = find_systems(self, text)
-        explicit = {k for k in mentioned if ":" in k}
-        # Any mention (repo or one of its modules) scopes the similarity search to that repo.
-        repos = sorted({k.split(":", 1)[0] for k in mentioned})
+        # Named modules and services count as explicit; a named GitHub repo (owner/name) only scopes the search.
+        explicit = {k for k in mentioned if ":" in k or "/" not in k}
+        repos = sorted({k.split(":", 1)[0] for k in mentioned if "/" in k.split(":", 1)[0]})
         terms = search_terms(text, limit=10)
         similar = (
             self.store.records(
                 """
                 CALL db.idx.fulltext.queryNodes('Source', $q) YIELD node, score
-                WHERE node.kind IN ['pr', 'issue'] AND ($repos = [] OR node.repo IN $repos)
+                WHERE node.kind IN ['pr', 'issue', 'ticket', 'thread', 'doc', 'adr', 'rfc', 'postmortem', 'runbook', 'meeting']
+                  AND ($repos = [] OR node.repo IN $repos)
                 RETURN node.uid AS uid, node.kind AS kind, node.title AS title, node.url AS url, node.ts AS ts, score
                 ORDER BY score DESC LIMIT 15
                 """,
@@ -781,7 +829,7 @@ class Tools:
         )
         if similar:
             touched = self.store.records(
-                "MATCH (s:Source)-[:TOUCHES]->(m:System) WHERE s.uid IN $uids AND m.kind = 'code' RETURN s.uid AS uid, m.key AS key",
+                "MATCH (s:Source)-[:TOUCHES|MENTIONS]->(m:System) WHERE s.uid IN $uids AND NOT ()-[:PART_OF]->(m) RETURN s.uid AS uid, m.key AS key",
                 {"uids": [s["uid"] for s in similar]},
             )
             score_of = {s["uid"]: s["score"] for s in similar}
@@ -808,7 +856,7 @@ class Tools:
         data = {
             "systems": out,
             "similar_past_work": [{"uid": s["uid"], "title": s["title"], "kind": s["kind"], "date": fmt_date(s["ts"])} for s in similar[:5]],
-            "method": "explicit mentions + modules touched by similar past PRs/issues, then expertise ranking",
+            "method": "explicit mentions + systems touched by similar past work (PRs, tickets, threads, docs), then expertise ranking",
         }
         return ToolResult(data, f"{len(out)} likely systems", sg, evidence)
 
@@ -851,7 +899,29 @@ class Tools:
         return ToolResult(data, f"{len(rows)} challenged premises", sg, evidence)
 
     def teams(self) -> ToolResult:
-        """Infer de-facto teams: label propagation over the people↔people WORKS_WITH projection."""
+        """Teams as declared in the org chart (when imported) and as they actually collaborate (label propagation)."""
+        sg = SubGraph()
+        declared = []
+        for t in self.store.records("MATCH (t:Team) RETURN t.key AS key, t.name AS name ORDER BY name"):
+            members = self.store.records(
+                "MATCH (p:Person)-[:MEMBER_OF]->(:Team {key: $k}) RETURN p.handle AS handle, p.role AS role, p.left AS left ORDER BY handle",
+                {"k": t["key"]},
+            )
+            owns = [r["key"] for r in self.store.records("MATCH (:Team {key: $k})-[:OWNS]->(s:System) RETURN s.key AS key ORDER BY key", {"k": t["key"]})]
+            declared.append(
+                {
+                    "team": t["name"],
+                    "members": [m["handle"] for m in members if not m["left"]],
+                    "former_members": [m["handle"] for m in members if m["left"]],
+                    "owns": owns,
+                }
+            )
+            tid = sg.node("Team", t["key"], name=t["name"])
+            for m in members:
+                if not m["left"]:
+                    sg.edge(sg.node("Person", m["handle"], name=m["handle"]), "MEMBER_OF", tid)
+            for key in owns:
+                sg.edge(tid, "OWNS", sg.node("System", key, name=key))
         communities = self.store.records(
             """
             CALL algo.labelPropagation({nodeLabels: ['Person'], relationshipTypes: ['WORKS_WITH'], maxIterations: 30})
@@ -861,28 +931,25 @@ class Tools:
             """,
             timeout_ms=30_000,
         )
-        rows = []
+        inferred = []
         for c in communities:
-            # Separate query per team (rather than UNWIND + filtered MATCH after aggregation; see list_systems).
+            # Separate query per community (rather than UNWIND + filtered MATCH after aggregation; see list_systems).
             focus = self.store.records(
-                "MATCH (p:Person)-[k:KNOWS_ABOUT]->(s:System) WHERE p.handle IN $people AND s.kind = 'code' "
-                "RETURN s.key AS key, sum(k.score) AS weight ORDER BY weight DESC LIMIT 8",
+                "MATCH (p:Person)-[k:KNOWS_ABOUT]->(s:System) WHERE p.handle IN $people AND NOT ()-[:PART_OF]->(s) "
+                "RETURN s.key AS key, sum(k.score) AS weight ORDER BY weight DESC LIMIT 5",
                 {"people": c["people"]},
             )
-            rows.append({"team": c["team"], "people": c["people"], "systems": [f["key"] for f in focus]})
-        sg = SubGraph()
-        teams = []
-        for r in rows[:8]:
-            teams.append({"people": r["people"], "focus_systems": r["systems"]})
-            for p in r["people"][:8]:
-                pid = sg.node("Person", p, name=p, team=r["team"])
-                for s_key in r["systems"][:3]:
-                    sg.edge(pid, "KNOWS_ABOUT", sg.node("System", s_key, name=s_key))
-        return ToolResult(
-            {"teams": teams, "method": "label propagation over WORKS_WITH (who reviews/replies to whom)"},
-            f"{len(teams)} inferred teams",
-            sg,
-        )
+            inferred.append({"people": c["people"], "focus_systems": [f["key"] for f in focus]})
+            if not declared:
+                for p in c["people"][:8]:
+                    pid = sg.node("Person", p, name=p, team=c["team"])
+                    for f in focus[:3]:
+                        sg.edge(pid, "KNOWS_ABOUT", sg.node("System", f["key"], name=f["key"]))
+        data: dict[str, Any] = {"teams": inferred, "method": "label propagation over WORKS_WITH (who reviews/replies to whom)"}
+        if declared:
+            data["declared_teams"] = declared
+        summary = f"{len(declared)} teams, {len(inferred)} collaboration groups" if declared else f"{len(inferred)} inferred teams"
+        return ToolResult(data, summary, sg)
 
 
 # ---------------------------------------------------------------------- schema for the LLM

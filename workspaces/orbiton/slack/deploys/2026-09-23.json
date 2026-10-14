@@ -1,0 +1,21 @@
+[
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Rolling back notifications-service v3.18.8: error rate up after deploy.",
+  "ts": "1790150700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "Rolling back route-optimizer v1.19.6: error rate up after deploy.",
+  "ts": "1790165100.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Thanks!",
+  "ts": "1790165400.000001",
+  "thread_ts": "1790165100.000001"
+ }
+]

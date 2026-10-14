@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Deployed events-pipeline v3.6.5 to production.",
+  "ts": "1776362820.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Ack.",
+  "ts": "1776363120.000001",
+  "thread_ts": "1776362820.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "On it.",
+  "ts": "1776363660.000001",
+  "thread_ts": "1776362820.000001"
+ }
+]

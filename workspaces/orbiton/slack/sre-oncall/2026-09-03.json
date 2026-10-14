@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01021",
+  "text": "Paged for checkout-api latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1788434940.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Done.",
+  "ts": "1788435240.000001",
+  "thread_ts": "1788434940.000001"
+ }
+]

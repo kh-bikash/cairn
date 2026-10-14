@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01023",
+  "text": "Can someone from SRE look at the payments-service dashboard? p99 creeping up.",
+  "ts": "1775551320.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "Paged for analytics-warehouse latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1775572680.000001"
+ }
+]

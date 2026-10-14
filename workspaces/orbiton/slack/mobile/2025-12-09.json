@@ -1,0 +1,29 @@
+[
+ {
+  "type": "message",
+  "user": "U01012",
+  "text": "Decision time for the driver app stack. With one mobile team of four, two native codebases is too much.",
+  "ts": "1765278000.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01013",
+  "text": "React Native then. We tested the prototype on a Moto E (2 GB RAM) and the map screen held 50+ fps.",
+  "ts": "1765279440.000001",
+  "thread_ts": "1765278000.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01014",
+  "text": "Flutter is nice but nobody here has shipped it.",
+  "ts": "1765280220.000001",
+  "thread_ts": "1765278000.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01012",
+  "text": "React Native it is. Jordan, ADR-0005 please.",
+  "ts": "1765281660.000001",
+  "thread_ts": "1765278000.000001"
+ }
+]

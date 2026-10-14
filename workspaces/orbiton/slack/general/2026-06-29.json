@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Welcome Diego to the team!",
+  "ts": "1782733020.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "Welcome Elena to the team!",
+  "ts": "1782746340.000001"
+ }
+]

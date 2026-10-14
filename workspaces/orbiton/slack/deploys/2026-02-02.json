@@ -1,0 +1,21 @@
+[
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Rolling back events-pipeline v2.4.4: error rate up after deploy.",
+  "ts": "1770041820.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Deployed auth-service v4.14.0 to production.",
+  "ts": "1770043440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "Thanks!",
+  "ts": "1770043740.000001",
+  "thread_ts": "1770043440.000001"
+ }
+]

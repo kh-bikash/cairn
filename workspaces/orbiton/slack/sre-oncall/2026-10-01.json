@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01022",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on ledger-db.",
+  "ts": "1790871600.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01014",
+  "text": "Thanks!",
+  "ts": "1790871900.000001",
+  "thread_ts": "1790871600.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Can you share the dashboard link?",
+  "ts": "1790872440.000001",
+  "thread_ts": "1790871600.000001"
+ }
+]

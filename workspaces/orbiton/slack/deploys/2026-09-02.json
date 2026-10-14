@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01013",
+  "text": "Deployed analytics-warehouse v2.26.4 to production.",
+  "ts": "1788373200.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
+  "text": "Looking now.",
+  "ts": "1788373500.000001",
+  "thread_ts": "1788373200.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01021",
+  "text": "Deployed feature-flags v3.28.2 to production.",
+  "ts": "1788374040.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Done.",
+  "ts": "1788374040.000002",
+  "thread_ts": "1788373200.000001"
+ }
+]

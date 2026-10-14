@@ -1,0 +1,8 @@
+key,name,description
+platform,Platform,"Shared infrastructure: events pipeline, auth, feature flags."
+payments,Payments,"Checkout, payments and the ledger."
+routing,Routing,Route optimisation and dispatch.
+mobile,Mobile,The driver app.
+data,Data,Analytics warehouse and data pipelines.
+sre,SRE,"Reliability, on-call and incident response."
+product,Product,Product management.

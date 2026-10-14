@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "Welcome Tom to the team!",
+  "ts": "1786711800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1786726440.000001"
+ }
+]

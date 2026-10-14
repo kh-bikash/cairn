@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on checkout-api.",
+  "ts": "1763463660.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Can someone from Product look at the driver-app dashboard? p99 creeping up.",
+  "ts": "1763485200.000001"
+ }
+]

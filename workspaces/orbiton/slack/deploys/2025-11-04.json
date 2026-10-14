@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Deployed notifications-service v2.1.8 to production.",
+  "ts": "1762277100.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "On it.",
+  "ts": "1762277400.000001",
+  "thread_ts": "1762277100.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Looking now.",
+  "ts": "1762277940.000001",
+  "thread_ts": "1762277100.000001"
+ }
+]

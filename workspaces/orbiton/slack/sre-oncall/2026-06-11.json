@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on driver-app.",
+  "ts": "1781170140.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Can someone from Routing look at the dispatch-api dashboard? p99 creeping up.",
+  "ts": "1781178180.000001"
+ }
+]

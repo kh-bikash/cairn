@@ -1,0 +1,43 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "SEV1: events-pipeline consumer lag growing fast, payments and dispatch events delayed. Two brokers dropped out of ISR.",
+  "ts": "1783995120.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "I don't know how to safely re-elect partition leaders here. Runbook step 6 assumes you know which partitions to move.",
+  "ts": "1783998240.000001",
+  "thread_ts": "1783995120.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Joining. I've only done this once with Priya watching, give me a minute.",
+  "ts": "1784000700.000001",
+  "thread_ts": "1783995120.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Promotion traffic is at ~11k events/s, way above the 3k we sized for. Throttling partner webhooks to buy time.",
+  "ts": "1784003820.000001",
+  "thread_ts": "1783995120.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Leaders re-elected, lag recovering. This took us way too long.",
+  "ts": "1784006280.000001",
+  "thread_ts": "1783995120.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Recovered at 07:05. Postmortem tomorrow.",
+  "ts": "1784008740.000001",
+  "thread_ts": "1783995120.000001"
+ }
+]

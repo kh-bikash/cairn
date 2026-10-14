@@ -1,0 +1,43 @@
+[
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Proposal for webhook idempotency: store an idempotency key per Stripe event in Redis with a 24h TTL. Stripe retries webhooks for up to 24 hours, so after that the key is useless.",
+  "ts": "1768486800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Why not keep keys forever in ledger-db?",
+  "ts": "1768488240.000001",
+  "thread_ts": "1768486800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "That table would grow by millions of rows a month, and Redis lookups are ~1ms on the hot path. 24h covers the whole retry window.",
+  "ts": "1768489020.000001",
+  "thread_ts": "1768486800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Makes sense. Let's go with 24h TTL in Redis. We'll document it later.",
+  "ts": "1768490460.000001",
+  "thread_ts": "1768486800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01023",
+  "text": "Does this cover refunds too?",
+  "ts": "1768491240.000001",
+  "thread_ts": "1768486800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Yes, every webhook type goes through the same check.",
+  "ts": "1768492020.000001",
+  "thread_ts": "1768486800.000001"
+ }
+]

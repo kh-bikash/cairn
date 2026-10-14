@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "Deployed dispatch-api v4.3.5 to production.",
+  "ts": "1773062400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Deployed ledger-db v4.27.2 to production.",
+  "ts": "1773070500.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Looking now.",
+  "ts": "1773070800.000001",
+  "thread_ts": "1773070500.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "👍",
+  "ts": "1773071340.000001",
+  "thread_ts": "1773070500.000001"
+ }
+]

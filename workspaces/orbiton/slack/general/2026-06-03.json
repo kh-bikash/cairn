@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01013",
+  "text": "Welcome Fatima to the team!",
+  "ts": "1780496760.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Thanks!",
+  "ts": "1780497060.000001",
+  "thread_ts": "1780496760.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Ack.",
+  "ts": "1780497600.000001",
+  "thread_ts": "1780496760.000001"
+ }
+]

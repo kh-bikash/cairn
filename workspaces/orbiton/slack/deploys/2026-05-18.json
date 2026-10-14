@@ -1,0 +1,35 @@
+[
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "warehouse-db v4.21.5 is live in staging, prod tomorrow.",
+  "ts": "1779091440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Can you share the dashboard link?",
+  "ts": "1779091740.000001",
+  "thread_ts": "1779091440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "auth-service v4.7.3 is live in staging, prod tomorrow.",
+  "ts": "1779092160.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Ack.",
+  "ts": "1779092280.000001",
+  "thread_ts": "1779091440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "👍",
+  "ts": "1779092460.000001",
+  "thread_ts": "1779092160.000001"
+ }
+]

@@ -1,0 +1,29 @@
+[
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "PAY-341: a customer was charged twice after a dispute. The second charge came from a dispute webhook Stripe resent ~3 days later.",
+  "ts": "1778060400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Stripe resends dispute events for up to 72 hours, not 24. Our idempotency key had already expired.",
+  "ts": "1778061840.000001",
+  "thread_ts": "1778060400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "So the 24h TTL assumption was wrong for disputes. Did we ever write that decision down?",
+  "ts": "1778062620.000001",
+  "thread_ts": "1778060400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "No, it only lived in this channel. I'll extend dispute keys to 7 days and add a ledger-level unique constraint as a backstop.",
+  "ts": "1778064060.000001",
+  "thread_ts": "1778060400.000001"
+ }
+]

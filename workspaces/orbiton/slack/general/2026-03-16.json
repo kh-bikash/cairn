@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "Welcome Kenji to the team!",
+  "ts": "1773653340.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "On it.",
+  "ts": "1773653640.000001",
+  "thread_ts": "1773653340.000001"
+ }
+]

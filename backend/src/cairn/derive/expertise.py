@@ -15,7 +15,9 @@ from typing import Any
 from cairn.graph.client import GraphStore
 
 HALF_LIFE_DAYS = 180.0
-WEIGHTS = {"authored": 3.0, "reviewed": 1.5, "merged": 1.0, "commented": 0.5}
+# Making a design decision or writing the doc about a system is stronger evidence of knowing it than routine tickets.
+WEIGHTS = {"authored": 3.0, "reviewed": 1.5, "merged": 1.0, "commented": 0.5, "worked": 1.5, "wrote": 3.0, "chatted": 0.5, "decided": 4.0}
+KINDS = (*WEIGHTS, "discussed")
 _DAY_MS = 86_400_000
 
 _ACTIVITY_QUERIES: dict[str, str] = {
@@ -38,6 +40,30 @@ _ACTIVITY_QUERIES: dict[str, str] = {
         WHERE NOT (p)-[:AUTHORED]->(s)
         RETURN p.handle, m.key, c.ts, t.additions + t.deletions
     """,
+    # Tickets someone filed or was assigned, on the components they touch.
+    "worked": """
+        MATCH (p:Person)-[:AUTHORED|ASSIGNED]->(s:Source {kind: 'ticket'})-[:TOUCHES]->(m:System)
+        RETURN p.handle, m.key, s.ts, 0
+    """,
+    # Design docs, ADRs, postmortems and runbooks written about a system.
+    "wrote": """
+        MATCH (p:Person)-[:AUTHORED]->(s:Source)-[:TOUCHES|MENTIONS]->(m:System)
+        WHERE s.kind IN ['doc', 'adr', 'rfc', 'postmortem', 'runbook', 'meeting']
+        RETURN p.handle, m.key, s.ts, 0
+    """,
+    # Making (or approving) a decision about a system.
+    "decided": """
+        MATCH (p:Person)-[:DECIDED]->(d:Decision)-[:AFFECTS]->(m:System)
+        RETURN p.handle, m.key, d.ts, 0
+    """,
+    # Chat: starting or replying to a thread that is about a system.
+    "chatted": """
+        MATCH (p:Person)-[:AUTHORED]->(t:Source {kind: 'thread'})-[:MENTIONS]->(m:System)
+        RETURN p.handle AS h, m.key AS k, t.ts AS ts, 0 AS churn
+        UNION ALL
+        MATCH (p:Person)-[:AUTHORED]->(c:Source)-[:REPLY_TO]->(t:Source {kind: 'thread'})-[:MENTIONS]->(m:System)
+        RETURN p.handle AS h, m.key AS k, c.ts AS ts, 0 AS churn
+    """,
 }
 
 # Issue/discussion activity has no file footprint; it counts toward the repo as a whole.
@@ -51,12 +77,14 @@ _MODULE_REPO = "MATCH (m:System)-[:PART_OF]->(r:System) RETURN m.key, r.key"
 
 @dataclass
 class Tally:
-    score: float = 0.0
+    score: float = 0.0  # recency-weighted: who to ask now
+    lifetime: float = 0.0  # undecayed: who has ever known it (what leaves when they do)
     counts: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     last_ts: int = 0
 
-    def add(self, kind: str, weight: float, ts: int) -> None:
+    def add(self, kind: str, weight: float, ts: int, lifetime: float | None = None) -> None:
         self.score += weight
+        self.lifetime += weight if lifetime is None else lifetime
         self.counts[kind] += 1
         self.last_ts = max(self.last_ts, ts)
 
@@ -82,14 +110,15 @@ def score_activities(
         for handle, key, ts, churn in rows:
             if ts is None:
                 continue
-            w = WEIGHTS[kind] * size_factor(churn) * decay(ts, now)
-            tallies[(handle, key)].add(kind, w, ts)
+            base = WEIGHTS[kind] * size_factor(churn)
+            w = base * decay(ts, now)
+            tallies[(handle, key)].add(kind, w, ts, base)
             # Roll module expertise up to the repo with a discount: knowing one module ≠ knowing the repo.
             if repo := module_repo.get(key):
-                tallies[(handle, repo)].add(kind, 0.5 * w, ts)
+                tallies[(handle, repo)].add(kind, 0.5 * w, ts, 0.5 * base)
     for handle, repo, ts in repo_activity:
         if ts is not None:
-            tallies[(handle, repo)].add("discussed", 0.75 * decay(ts, now), ts)
+            tallies[(handle, repo)].add("discussed", 0.75 * decay(ts, now), ts, 0.75)
     return tallies
 
 
@@ -103,17 +132,7 @@ def derive_expertise(store: GraphStore, *, min_score: float = 0.05) -> int:
     tallies = score_activities(activities, repo_activity, module_repo, now)
 
     rows: list[dict[str, Any]] = [
-        {
-            "handle": h,
-            "key": k,
-            "score": round(t.score, 4),
-            "authored": t.counts.get("authored", 0),
-            "reviewed": t.counts.get("reviewed", 0),
-            "merged": t.counts.get("merged", 0),
-            "commented": t.counts.get("commented", 0),
-            "discussed": t.counts.get("discussed", 0),
-            "last_ts": t.last_ts,
-        }
+        {"handle": h, "key": k, "score": round(t.score, 4), "lifetime": round(t.lifetime, 4), "last_ts": t.last_ts, **{kind: t.counts.get(kind, 0) for kind in KINDS}}
         for (h, k), t in tallies.items()
         if t.score >= min_score
     ]
@@ -123,8 +142,7 @@ def derive_expertise(store: GraphStore, *, min_score: float = 0.05) -> int:
         UNWIND $rows AS r
         MATCH (p:Person {handle: r.handle}), (s:System {key: r.key})
         MERGE (p)-[e:KNOWS_ABOUT]->(s)
-        SET e.score = r.score, e.authored = r.authored, e.reviewed = r.reviewed, e.merged = r.merged,
-            e.commented = r.commented, e.discussed = r.discussed, e.last_ts = r.last_ts
+        SET e.score = r.score, e.lifetime = r.lifetime, e.last_ts = r.last_ts, e.authored = r.authored, e.reviewed = r.reviewed, e.merged = r.merged, e.commented = r.commented, e.worked = r.worked, e.wrote = r.wrote, e.chatted = r.chatted, e.decided = r.decided, e.discussed = r.discussed
         """,
         rows,
     )

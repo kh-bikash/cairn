@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on ledger-db.",
+  "ts": "1763373660.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Looking now.",
+  "ts": "1763373960.000001",
+  "thread_ts": "1763373660.000001"
+ }
+]

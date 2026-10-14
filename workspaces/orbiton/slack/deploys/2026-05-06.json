@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "ledger-db v3.7.0 is live in staging, prod tomorrow.",
+  "ts": "1778077680.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "On it.",
+  "ts": "1778077980.000001",
+  "thread_ts": "1778077680.000001"
+ }
+]

@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "checkout-api v4.28.0 is live in staging, prod tomorrow.",
+  "ts": "1776936960.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Looking now.",
+  "ts": "1776937260.000001",
+  "thread_ts": "1776936960.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "On it.",
+  "ts": "1776937800.000001",
+  "thread_ts": "1776936960.000001"
+ }
+]

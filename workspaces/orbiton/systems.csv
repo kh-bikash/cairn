@@ -1,0 +1,13 @@
+key,name,kind,team,depends_on,aliases,description
+checkout-api,checkout-api,service,payments,payments-service;auth-service;feature-flags,checkout,Public checkout API used by the web and partner integrations.
+payments-service,payments-service,service,payments,ledger-db;events-pipeline,payments svc;payment service,"Charges, refunds and Stripe webhooks."
+ledger-db,ledger-db,database,payments,,ledger,Postgres ledger of every money movement.
+events-pipeline,events-pipeline,platform,platform,,kafka;event bus;msk,"Company-wide event bus (Kafka, later Amazon MSK)."
+auth-service,auth-service,service,platform,,auth;jwt,"Login, tokens and sessions for drivers and staff."
+feature-flags,feature-flags,service,platform,,flags;flag service,In-house feature flag service.
+route-optimizer,route-optimizer,service,routing,,optimizer;or-tools,Builds daily delivery routes with time windows.
+dispatch-api,dispatch-api,service,routing,route-optimizer;events-pipeline;auth-service,dispatch,Assigns routes to drivers and tracks progress.
+driver-app,driver-app,app,mobile,dispatch-api;auth-service;notifications-service,driver app;mobile app,React Native app used by delivery drivers.
+notifications-service,notifications-service,service,platform,events-pipeline,notifications;sms,SMS and push notifications to customers and drivers.
+warehouse-db,warehouse-db,database,data,,orders db,Operational Postgres for orders and inventory.
+analytics-warehouse,analytics-warehouse,data,data,events-pipeline;warehouse-db,warehouse;dbt,Analytics warehouse and dbt models.

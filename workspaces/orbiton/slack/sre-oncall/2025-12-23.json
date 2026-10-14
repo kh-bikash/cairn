@@ -1,0 +1,35 @@
+[
+ {
+  "type": "message",
+  "user": "U01022",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on feature-flags.",
+  "ts": "1766477940.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01012",
+  "text": "Done.",
+  "ts": "1766478240.000001",
+  "thread_ts": "1766477940.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "Looking now.",
+  "ts": "1766478780.000001",
+  "thread_ts": "1766477940.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01014",
+  "text": "Can someone from SRE look at the checkout-api dashboard? p99 creeping up.",
+  "ts": "1766485500.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "On it.",
+  "ts": "1766485800.000001",
+  "thread_ts": "1766485500.000001"
+ }
+]

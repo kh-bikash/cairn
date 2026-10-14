@@ -1,0 +1,8 @@
+[
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Rolling back analytics-warehouse v2.29.8: error rate up after deploy.",
+  "ts": "1764693600.000001"
+ }
+]

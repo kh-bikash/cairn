@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Can someone from Payments look at the events-pipeline dashboard? p99 creeping up.",
+  "ts": "1776878580.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01012",
+  "text": "Ack.",
+  "ts": "1776878880.000001",
+  "thread_ts": "1776878580.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Same here.",
+  "ts": "1776879420.000001",
+  "thread_ts": "1776878580.000001"
+ }
+]

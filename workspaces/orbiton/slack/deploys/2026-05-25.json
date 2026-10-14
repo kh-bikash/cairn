@@ -1,0 +1,35 @@
+[
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Rolling back auth-service v3.2.0: error rate up after deploy.",
+  "ts": "1779703200.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "👍",
+  "ts": "1779703500.000001",
+  "thread_ts": "1779703200.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Done.",
+  "ts": "1779704040.000001",
+  "thread_ts": "1779703200.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Rolling back warehouse-db v3.22.6: error rate up after deploy.",
+  "ts": "1779723240.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Can you share the dashboard link?",
+  "ts": "1779723540.000001",
+  "thread_ts": "1779723240.000001"
+ }
+]

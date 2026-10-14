@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "analytics-warehouse v2.13.3 is live in staging, prod tomorrow.",
+  "ts": "1763489160.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "👍",
+  "ts": "1763489460.000001",
+  "thread_ts": "1763489160.000001"
+ }
+]

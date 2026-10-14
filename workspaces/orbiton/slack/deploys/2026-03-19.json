@@ -1,0 +1,35 @@
+[
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Deployed auth-service v4.7.0 to production.",
+  "ts": "1773912780.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Looking now.",
+  "ts": "1773913080.000001",
+  "thread_ts": "1773912780.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "checkout-api v3.2.7 is live in staging, prod tomorrow.",
+  "ts": "1773943080.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Looking now.",
+  "ts": "1773943380.000001",
+  "thread_ts": "1773943080.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Can you share the dashboard link?",
+  "ts": "1773943920.000001",
+  "thread_ts": "1773943080.000001"
+ }
+]

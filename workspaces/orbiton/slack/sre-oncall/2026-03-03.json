@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Paged for ledger-db latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1772525760.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01008",
+  "text": "Thanks!",
+  "ts": "1772526060.000001",
+  "thread_ts": "1772525760.000001"
+ }
+]
