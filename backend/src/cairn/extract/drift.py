@@ -18,7 +18,7 @@ from cairn.config import Settings
 from cairn.extract.grounding import verify_quote
 from cairn.extract.models import QuoteOnly
 from cairn.graph.client import GraphStore
-from cairn.llm.client import LLM, LLMNotConfigured
+from cairn.llm.client import LLM, LLMNotConfigured, LLMQuotaExhausted
 from cairn.llm.decider import LLMDecider
 
 log = logging.getLogger(__name__)
@@ -138,6 +138,7 @@ class DriftReport:
     challenges: int = 0
     unverified: int = 0
     errors: int = 0
+    deferred: int = 0
     seconds: float = 0.0
     error_samples: list[str] = field(default_factory=list)
 
@@ -196,19 +197,31 @@ async def check_premise(store: GraphStore, llm: LLM, decider: LLMDecider, premis
 
 
 async def run_drift(store: GraphStore, llm: LLM, settings: Settings, *, limit: int) -> dict[str, Any]:
-    if not (llm.available("decide") and llm.available("extract")):
-        raise LLMNotConfigured("drift needs both the decide and extract models configured")
+    replay = not (llm.available("decide") and llm.available("extract"))
+    if replay and not settings.llm_cache:
+        raise LLMNotConfigured("drift needs the decide and extract models (or a populated LLM cache to replay)")
     started = time.perf_counter()
     report = DriftReport()
     decider = LLMDecider(llm, threshold=settings.decide_confidence_threshold)
     premises = store.records(_PREMISES, {"version": DRIFT_VERSION, "limit": limit})
     report.premises = len(premises)
     sem = asyncio.Semaphore(settings.llm_max_concurrency)
+    stop = asyncio.Event()
 
     async def one(p: dict[str, Any]) -> None:
         async with sem:
+            if stop.is_set():
+                report.deferred += 1
+                return
             try:
                 await check_premise(store, llm, decider, p, report)
+            except LLMQuotaExhausted:
+                stop.set()
+                report.deferred += 1
+            except LLMNotConfigured:
+                if not replay:
+                    raise
+                report.deferred += 1
             except Exception as exc:  # noqa: BLE001 - keep going; report the failure
                 report.errors += 1
                 if len(report.error_samples) < 5:

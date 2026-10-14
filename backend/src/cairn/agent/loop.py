@@ -171,14 +171,14 @@ class Agent:
         self.tools = Tools(store)
         self.actions = ActionService(store, settings)
 
-    async def run(self, question: str, history: list[dict[str, str]] | None = None) -> AsyncIterator[dict[str, Any]]:
+    async def run(self, question: str, history: list[dict[str, str]] | None = None, *, use_llm: bool = True) -> AsyncIterator[dict[str, Any]]:
         question = question.strip()
         yield {"type": "start", "question": question}
         ledger = Ledger()
         used = SubGraph()
         started = time.perf_counter()
 
-        if self.llm.available("agent"):
+        if use_llm and self.llm.available("agent"):
             try:
                 async for event in self._llm_loop(question, history or [], ledger, used):
                     yield event
@@ -272,7 +272,7 @@ class Agent:
             yield event
             if result is not None:
                 results.append((name, result))
-        text = plan.render(results, ledger) if results else "I couldn't find anything in the graph for that question."
+        text = plan.render(results, ledger)
         yield await self._finish(question, text, ledger, used, mode="router")
 
     # ------------------------------------------------------------------ shared

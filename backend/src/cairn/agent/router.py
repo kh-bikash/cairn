@@ -25,8 +25,9 @@ _INTENTS: list[tuple[str, re.Pattern[str]]] = [
     ("risk", re.compile(r"\b(bus factor|leaves?|left|quits?|single point|knowledge risk|concentrat\w*|handoff|hand off)\b", re.I)),
     ("teams", re.compile(r"\b(teams?|who works with|groups?)\b", re.I)),
     ("connect", re.compile(r"\b(connected|related|relationship|path)\b.*\b(between|to|and)\b", re.I)),
-    ("who", re.compile(r"\bwho\b.*\b(knows?|expert|owns?|review|ask|maintains?|best|should|worked)\b|\bexperts?\b", re.I)),
-    ("impact", re.compile(r"\b(break|breaks|impact|depends?|dependen\w*|blast radius|goes down|downstream|affects?)\b", re.I)),
+    # Impact before "who": "who should be warned if X breaks" is a blast-radius question.
+    ("impact", re.compile(r"\b(break|breaks|breaking|impact|depends?|dependen\w*|blast radius|goes down|downstream|affects?|warned)\b", re.I)),
+    ("who", re.compile(r"\bwho\b.*\b(knows?|expert|owns?|review|ask|maintains?|best|should|worked|works|go-to|responsible|person)\b|\bexperts?\b", re.I)),
     ("timeline", re.compile(r"\b(changed|timeline|history|since|recently|last (week|month|year)|as of|what happened)\b", re.I)),
     ("why", re.compile(r"\b(why|reason|rationale|decid\w*|decision|chose|choose|how come)\b", re.I)),
 ]
@@ -120,10 +121,141 @@ def intent_of(question: str) -> str:
 class Plan:
     intent: str
     calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
+    note: str | None = None  # set when the router declines instead of answering
 
     def render(self, results: list[tuple[str, ToolResult]], ledger: Ledger) -> str:
         parts = [RENDERERS.get(name, _render_generic)(r, ledger) for name, r in results]
-        return "\n\n".join(p for p in parts if p).strip() or "The graph returned no results for that question."
+        return "\n\n".join(p for p in parts if p).strip() or self.note or "The graph returned no results for that question."
+
+
+# Words that frame a question rather than name its topic.
+_GENERIC = frozenset(
+    [
+        "who",
+        "whom",
+        "whose",
+        "what",
+        "which",
+        "when",
+        "where",
+        "why",
+        "how",
+        "does",
+        "did",
+        "do",
+        "should",
+        "would",
+        "could",
+        "will",
+        "can",
+        "is",
+        "are",
+        "was",
+        "were",
+        "the",
+        "a",
+        "an",
+        "of",
+        "in",
+        "on",
+        "for",
+        "to",
+        "with",
+        "and",
+        "or",
+        "our",
+        "we",
+        "us",
+        "they",
+        "it",
+        "this",
+        "that",
+        "these",
+        "those",
+        "best",
+        "most",
+        "go-to",
+        "person",
+        "people",
+        "knows",
+        "know",
+        "owns",
+        "own",
+        "owner",
+        "expert",
+        "experts",
+        "review",
+        "reviews",
+        "reviewer",
+        "works",
+        "work",
+        "worked",
+        "responsible",
+        "ask",
+        "talk",
+        "team",
+        "code",
+        "module",
+        "repo",
+        "repository",
+        "project",
+        "change",
+        "changes",
+        "breaking",
+        "break",
+        "breaks",
+        "warned",
+        "warn",
+        "depends",
+        "depend",
+        "downstream",
+        "happens",
+        "happen",
+        "if",
+        "leaves",
+        "left",
+        "lose",
+        "goes",
+        "go",
+        "down",
+        "fails",
+        "fail",
+        "outage",
+        "crash",
+        "crashes",
+        "stops",
+        "stop",
+        "slow",
+        "recently",
+        "lately",
+        "since",
+        "until",
+        "changed",
+        "happened",
+        "anything",
+        "something",
+    ]
+)
+
+
+def unmatched_topic(tools: Tools, question: str, systems: list[str], people: list[str]) -> list[str]:
+    """Topic words not explained by a matched system/person that never appear together anywhere in the graph.
+
+    "Who owns the Kubernetes operator?" mentions words that exist separately but never co-occur, so answering
+    with whatever system matched would be confidently wrong. Returns those words, or [] if the topic exists.
+    """
+    covered = {w for key in systems for w in re.split(r"[/:#\s_.-]+", key.lower()) if w}
+    covered |= {p.lower() for p in people}
+    words = [w for w in re.findall(r"[a-z][a-z0-9-]{2,}", question.lower()) if w not in _GENERIC and w not in covered]
+    words = [w for w in words if not any(w in c or c in w for c in covered if len(c) >= 4)]
+    if not words:
+        return []
+    query = " ".join(sorted(set(words), key=len, reverse=True)[:3])  # space = AND in the full-text engine
+    for label in ("Source", "Decision", "System"):
+        hits = tools.store.ro_query(f"CALL db.idx.fulltext.queryNodes('{label}', $q) YIELD node RETURN count(node)", {"q": query})
+        if hits and hits[0][0]:
+            return []
+    return words
 
 
 def route(tools: Tools, question: str, action_repos: list[str] | None = None) -> Plan:
@@ -138,6 +270,9 @@ def route(tools: Tools, question: str, action_repos: list[str] | None = None) ->
     people = find_people(tools, question)
     topic = _STOPWORDS.sub(" ", question).strip(" ?.!") or question
     plan = Plan(intent)
+    if intent in {"who", "impact", "timeline", "search"} and (missing := unmatched_topic(tools, question, systems, people)):
+        plan.note = f"I couldn't find anything about “{' '.join(missing)}” in the graph, so I can't answer that reliably."
+        return plan
     if intent == "drift":
         plan.calls.append(("drift_report", {}))
     elif intent == "risk":

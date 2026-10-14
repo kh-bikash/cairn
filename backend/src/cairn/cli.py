@@ -22,6 +22,8 @@ for _stream in (sys.stdout, sys.stderr):
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Cairn: the company brain that remembers why.")
 console = Console()
+# Logs go to stderr: stdout must stay clean for piping and for the MCP stdio transport.
+log_console = Console(stderr=True)
 
 
 @app.callback()
@@ -29,7 +31,7 @@ def _setup(verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False) ->
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
         format="%(message)s",
-        handlers=[RichHandler(console=console, show_path=False, markup=False)],
+        handlers=[RichHandler(console=log_console, show_path=False, markup=False)],
     )
     for noisy in ("httpx", "httpx2", "httpcore", "openai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
@@ -238,6 +240,97 @@ def ask(question: str) -> None:
                     console.print(f"[dim][{c['ref']}] {c['title']} {c['url']}[/]")
 
     asyncio.run(run())
+
+
+snapshot_app = typer.Typer(no_args_is_help=True, help="Reproducible demo snapshot (raw data + LLM cache).")
+app.add_typer(snapshot_app, name="snapshot")
+
+
+@snapshot_app.command("pack")
+def snapshot_pack(out: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz") -> None:
+    """Bundle data/raw and data/llm-cache into one archive."""
+    from pathlib import Path
+
+    from cairn.snapshot import pack
+
+    counts = pack(get_settings().data_dir, Path(out))
+    size = Path(out).stat().st_size / 1e6
+    console.print(f"[green]✓[/] {out} ({size:.1f} MB): {counts}")
+
+
+@snapshot_app.command("unpack")
+def snapshot_unpack(src: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz") -> None:
+    """Restore a snapshot into the data directory."""
+    from pathlib import Path
+
+    from cairn.snapshot import unpack
+
+    n = unpack(Path(src), get_settings().data_dir)
+    console.print(f"[green]✓[/] restored {n} files from {src}")
+
+
+@app.command()
+def demo(src: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz") -> None:
+    """One command for judges: restore the snapshot, build the graph, replay extraction and drift (no keys needed)."""
+    from pathlib import Path
+
+    from cairn.derive.expertise import derive_collaboration, derive_expertise
+    from cairn.extract.drift import run_drift
+    from cairn.extract.pipeline import run_extraction
+    from cairn.github.fetch import load_snapshot
+    from cairn.graph.client import GraphStore
+    from cairn.ingest.loader import build_rows, write_rows
+    from cairn.llm.client import LLM
+    from cairn.snapshot import unpack
+
+    s = get_settings()
+    if Path(src).exists():
+        console.print(f"restored {unpack(Path(src), s.data_dir)} files from {src}")
+    store = GraphStore(s)
+    store.drop()
+    repos = [r for r in s.repos if (s.raw_dir / r.replace("/", "__") / "meta.json").exists()]
+    write_rows(store, build_rows([load_snapshot(s.raw_dir, r) for r in repos]))
+    derive_expertise(store)
+    derive_collaboration(store)
+    llm = LLM(s)
+    console.print_json(json.dumps(asyncio.run(run_extraction(store, llm, s, limit=100_000))))
+    console.print_json(json.dumps(asyncio.run(run_drift(store, llm, s, limit=100_000))))
+    console.print("[green]✓[/] demo graph ready")
+    console.print_json(json.dumps(store.counts()))
+
+
+@app.command("eval")
+def eval_cmd(
+    systems: Annotated[str, typer.Option(help="Comma-separated: cairn,rag,router")] = "cairn,rag,router",
+    questions: Annotated[str, typer.Option()] = "../eval/questions.jsonl",
+    out: Annotated[str, typer.Option()] = "../eval",
+    only: Annotated[str | None, typer.Option(help="Comma-separated question ids")] = None,
+) -> None:
+    """Score Cairn against a plain-RAG baseline and graph-only routing on questions with known answers."""
+    from pathlib import Path
+
+    from cairn.evaluation import load_questions, run_eval, write_results
+    from cairn.graph.client import GraphStore
+    from cairn.llm.client import LLM
+
+    s = get_settings()
+    qs = load_questions(Path(questions))
+    if only:
+        wanted = set(only.split(","))
+        qs = [q for q in qs if q.id in wanted]
+    llm = LLM(s)
+    scores = asyncio.run(run_eval(GraphStore(s), llm, s, qs, [x.strip() for x in systems.split(",") if x.strip()]))
+    md = write_results(scores, qs, Path(out))
+    console.print(md.read_text(encoding="utf-8"), markup=False)
+    console.print_json(json.dumps(llm.usage.snapshot()))
+
+
+@app.command("mcp")
+def mcp_cmd(transport: Annotated[str, typer.Option(help="stdio | streamable-http | sse")] = "stdio") -> None:
+    """Run Cairn as an MCP server (read-only graph tools for Claude Desktop, Cursor, ...)."""
+    from cairn.mcp_server import main
+
+    main(transport)
 
 
 @app.command()

@@ -16,7 +16,7 @@ from cairn.config import Settings
 from cairn.extract.grounding import verify_quote
 from cairn.extract.models import ExtractedDecision, ExtractionResult, QuotedClaim
 from cairn.graph.client import GraphStore
-from cairn.llm.client import LLM, LLMNotConfigured
+from cairn.llm.client import LLM, LLMNotConfigured, LLMQuotaExhausted
 from cairn.llm.decider import LLMDecider
 
 log = logging.getLogger(__name__)
@@ -77,6 +77,9 @@ class Report:
     premises_dropped: int = 0
     decisions_dropped: int = 0
     errors: int = 0
+    deferred: int = 0
+    quota_exhausted: bool = False
+    mode: str = "live"
     seconds: float = 0.0
     error_samples: list[str] = field(default_factory=list)
 
@@ -335,21 +338,39 @@ async def process_thread(store: GraphStore, llm: LLM, decider: LLMDecider | None
 
 
 async def run_extraction(store: GraphStore, llm: LLM, settings: Settings, *, limit: int, repo: str | None = None) -> dict[str, Any]:
-    if not llm.available("extract"):
-        raise LLMNotConfigured(f"extraction model {settings.model_extract} has no API key configured")
+    """Extract decisions from unprocessed threads.
+
+    Without API keys this runs in *replay* mode: responses come from the on-disk LLM cache (e.g. a shipped demo
+    snapshot) and threads without a cached response are left pending instead of failing. When every model hits its
+    daily quota the batch stops cleanly; remaining threads stay pending for the next run.
+    """
+    replay = not llm.available("extract")
+    if replay and not settings.llm_cache:
+        raise LLMNotConfigured(f"extraction model {settings.model_extract} has no API key and the LLM cache is disabled")
     started = time.perf_counter()
     report = Report()
-    decider = LLMDecider(llm, threshold=settings.decide_confidence_threshold) if llm.available("decide") else None
+    report.mode = "replay" if replay else "live"
+    decider = LLMDecider(llm, threshold=settings.decide_confidence_threshold)
     uids = [r["uid"] for r in store.records(_CANDIDATES, {"version": EXTRACT_VERSION, "repo": repo, "limit": limit})]
     report.candidates = len(uids)
     sem = asyncio.Semaphore(settings.llm_max_concurrency)
+    stop = asyncio.Event()
 
     async def one(uid: str) -> None:
         async with sem:
+            if stop.is_set():
+                report.deferred += 1
+                return
             try:
                 await process_thread(store, llm, decider, uid, report)
+            except LLMQuotaExhausted:
+                stop.set()
+                report.deferred += 1
+                report.quota_exhausted = True
             except LLMNotConfigured:
-                raise
+                if not replay:
+                    raise
+                report.deferred += 1  # no cached response for this thread; a keyed run will pick it up
             except Exception as exc:  # noqa: BLE001 - one bad thread must not abort the batch
                 report.errors += 1
                 if len(report.error_samples) < 5:

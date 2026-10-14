@@ -53,6 +53,88 @@ def ft_query(text: str, *, prefix: bool = True) -> str:
     return "|".join(f"{w}*" if prefix and len(w) > 3 else w for w in words[:8])
 
 
+_WORD = re.compile(r"[a-z][a-z0-9_]{2,}")
+_TOPIC_STOP = frozenset(
+    [
+        "why",
+        "does",
+        "did",
+        "do",
+        "how",
+        "come",
+        "what",
+        "which",
+        "who",
+        "when",
+        "where",
+        "our",
+        "we",
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "into",
+        "this",
+        "that",
+        "these",
+        "those",
+        "is",
+        "are",
+        "was",
+        "were",
+        "instead",
+        "rather",
+        "than",
+        "not",
+        "use",
+        "uses",
+        "using",
+        "used",
+        "make",
+        "makes",
+        "made",
+        "run",
+        "runs",
+        "get",
+        "gets",
+        "have",
+        "has",
+        "had",
+        "can",
+        "could",
+        "should",
+        "would",
+        "will",
+        "about",
+        "between",
+        "against",
+        "its",
+        "it's",
+        "their",
+        "there",
+        "then",
+        "them",
+        "they",
+        "you",
+        "your",
+    ]
+)
+
+
+def _words(text: str) -> list[str]:
+    return _WORD.findall(text.lower().replace("-", " "))
+
+
+def _stem(word: str) -> str:
+    """Crude suffix stripping: enough to match 'testing'/'tests'/'tested', 'pinned'/'pins'."""
+    for suffix in ("ing", "ed", "es", "s"):
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+            word = word[: -len(suffix)]
+            break
+    return word[:6]
+
+
 def parse_date(value: str | None) -> int | None:
     if not value:
         return None
@@ -176,8 +258,7 @@ class Tools:
                 {"q": q},
             )
         ]
-        # Keep order (best first), drop duplicates.
-        decision_uids = list(dict.fromkeys(decision_uids))[:limit]
+        decision_uids = self._relevant_decisions(topic, list(dict.fromkeys(decision_uids)))[:limit]
         decisions = [self._decision_detail(uid, sg, evidence) for uid in decision_uids]
         if decisions:
             return ToolResult({"decisions": decisions}, f"{len(decisions)} decisions on '{topic}'", sg, evidence)
@@ -191,6 +272,39 @@ class Tools:
         }
         fallback.summary = f"no decisions on '{topic}', {len(fallback.data['sources'])} raw threads"
         return fallback
+
+    def _relevant_decisions(self, topic: str, uids: list[str]) -> list[str]:
+        """Keep decisions that actually cover the question's topic, best first.
+
+        Full-text OR-matching happily returns a 'storage' decision for "why did we move storage to MongoDB?".
+        A decision must contain at least half of the topic's stemmed content words (repo names don't count),
+        otherwise the honest answer is that no recorded decision explains it.
+        """
+        if not uids:
+            return []
+        repo_words = {w for r in self.store.records("MATCH (s:System {kind: 'repo'}) RETURN s.name AS n") for w in _words(r["n"] or "")}
+        terms = {_stem(w) for w in _words(topic) if w not in _TOPIC_STOP and w not in repo_words}
+        if not terms:
+            return uids
+        rows = self.store.records(
+            """
+            MATCH (d:Decision) WHERE d.uid IN $uids
+            OPTIONAL MATCH (d)-[:BECAUSE|REJECTED]->(p:Premise)
+            OPTIONAL MATCH (d)-[:DECIDED_IN]->(t:Source)
+            RETURN d.uid AS uid, d.title AS title, d.summary AS summary, d.statement AS statement,
+                   collect(p.text) AS premises, collect(p.option) AS options, collect(t.title) AS threads
+            """,
+            {"uids": uids},
+        )
+        need = max(1, min(3, -(-len(terms) // 2)))  # ceil(half), capped so long questions aren't impossible
+        scored = []
+        for r in rows:
+            text = " ".join(str(x) for x in [r["title"], r["summary"], r["statement"], *r["premises"], *r["options"], *r["threads"]] if x)
+            have = {_stem(w) for w in _words(text)}
+            overlap = len(terms & have)
+            if overlap >= need:
+                scored.append((overlap, -uids.index(r["uid"]), r["uid"]))
+        return [uid for _, _, uid in sorted(scored, reverse=True)]
 
     def _decision_detail(self, uid: str, sg: SubGraph, evidence: list[Evidence]) -> dict[str, Any]:
         rows = self.store.records(
