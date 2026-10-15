@@ -79,6 +79,7 @@ class Report:
     decisions_dropped: int = 0
     errors: int = 0
     deferred: int = 0
+    pruned: int = 0
     quota_exhausted: bool = False
     mode: str = "live"
     seconds: float = 0.0
@@ -90,7 +91,9 @@ class Report:
 _CANDIDATES = """
 MATCH (s:Source)
 // ADRs/RFCs are parsed deterministically on import; everything else with a conversation is a candidate.
+// Repository docs only count when they are design records: READMEs and guides describe, they don't decide.
 WHERE s.kind IN ['pr', 'issue', 'discussion', 'doc', 'thread', 'ticket', 'meeting', 'postmortem', 'runbook']
+  AND (s.kind <> 'doc' OR coalesce(s.design, false))
   AND (s.extract_version IS NULL OR s.extract_version < $version)
   AND ($repo IS NULL OR s.repo = $repo)
   AND NOT (s.kind = 'pr' AND s.state = 'closed')
@@ -219,7 +222,8 @@ def ground(thread: Thread, result: ExtractionResult, report: Report) -> list[Gro
         rejected = [(r, uid) for r in d.rejected[:3] if (uid := check(r))]
         total_claims = 1 + len(d.premises[:4]) + len(d.rejected[:3])
         verified = int(statement_uid is not None) + len(premises) + len(rejected)
-        if statement_uid is None and not premises:
+        if not premises and not rejected:
+            # Cairn remembers *why*: a decision with no verified reason or alternative isn't worth keeping.
             report.decisions_dropped += 1
             continue
         systems = [s for s in d.systems if s in allowed_systems] or thread.modules[:5]
@@ -413,5 +417,36 @@ async def run_extraction(store: GraphStore, llm: LLM, settings: Settings, *, lim
                 log.warning("extraction failed for %s: %s", uid, exc)
 
     await asyncio.gather(*(one(u) for u in uids))
+    report.pruned = prune_unsupported(store)
     report.seconds = round(time.perf_counter() - started, 1)
     return vars(report)
+
+
+def prune_unsupported(store: GraphStore) -> int:
+    """Remove decisions that don't meet the bar, including ones extracted under older rules: no verified reason or
+    alternative, or found only in a repository doc that describes rather than decides (README, guide, template)."""
+    doomed = [
+        r["uid"]
+        for r in store.records(
+            """
+            MATCH (d:Decision)
+            OPTIONAL MATCH (d)-[:BECAUSE|REJECTED]->(p:Premise)
+            WITH d, count(p) AS reasons
+            OPTIONAL MATCH (d)-[:DECIDED_IN]->(t:Source)
+            WITH d, reasons, t
+            WHERE reasons = 0 OR (t.kind = 'doc' AND NOT coalesce(t.design, false))
+            RETURN DISTINCT d.uid AS uid
+            """
+        )
+    ]
+    if doomed:
+        store.query(
+            """
+            UNWIND $uids AS u
+            MATCH (d:Decision {uid: u})
+            OPTIONAL MATCH (d)-[:BECAUSE|REJECTED]->(p:Premise)
+            DETACH DELETE d, p
+            """,
+            {"uids": doomed},
+        )
+    return len(doomed)

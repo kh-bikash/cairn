@@ -17,6 +17,7 @@ from cairn.ingest.text import (
     doc_uid,
     extract_refs,
     is_bot,
+    is_design_doc,
     login_of,
     rationale_signal,
     to_ms,
@@ -117,6 +118,8 @@ def _add_snapshot(rows: Rows, snap: dict[str, Any]) -> None:
                 "state": "current",
                 "author": None,
                 "labels": [],
+                "signal": rationale_signal(doc["text"]),
+                "design": is_design_doc(doc["path"]),
             }
         )
 
@@ -270,7 +273,7 @@ def _dedupe(items: list[dict[str, Any]], keys: tuple[str, ...]) -> list[dict[str
 
 _SOURCE_SET = """
 SET s.kind = r.kind, s.repo = r.repo, s.number = r.number, s.title = r.title, s.body = r.body,
-    s.url = r.url, s.ts = r.ts, s.state = r.state, s.author = r.author, s.labels = r.labels, s.signal = coalesce(r.signal, 0)
+    s.url = r.url, s.ts = r.ts, s.state = r.state, s.author = r.author, s.labels = r.labels, s.signal = coalesce(r.signal, 0), s.design = coalesce(r.design, false)
 """
 
 WRITES: list[tuple[str, str]] = [

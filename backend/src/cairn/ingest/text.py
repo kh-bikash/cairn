@@ -124,6 +124,14 @@ _RATIONALE = (
 )
 
 
+_DESIGN_DOC = re.compile(r"(^|[/_-])(adrs?|rfcs?|design|decisions?|architecture|proposals?)([/_.-]|$)", re.I)
+
+
+def is_design_doc(path: str) -> bool:
+    """ADRs, RFCs and design notes record decisions; READMEs, guides and templates only describe the present."""
+    return bool(_DESIGN_DOC.search(path))
+
+
 def rationale_signal(text: str | None) -> int:
     """How much a text argues for a choice. Computed in Python at load time so the extraction queue can sort on it
     (FalkorDB's toLower() rejects some valid emoji, so string functions over raw bodies aren't safe in Cypher)."""

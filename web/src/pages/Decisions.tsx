@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { GraphView } from '../components/GraphView'
 import { Avatar, Badge, Card, Empty, ErrorNote, Input, Page, SectionTitle, Spinner } from '../components/ui'
 import { api } from '../lib/api'
-import { kindLabel, shortSystem } from '../lib/format'
+import { kindLabel, plural, shortSystem } from '../lib/format'
 import { href, sourceHref } from '../lib/router'
 import type { Theme } from '../lib/theme'
 import { useAsync } from '../lib/useAsync'
@@ -60,7 +60,7 @@ function DecisionList() {
                         )}
                         <Badge>{d.category}</Badge>
                         <span>{d.date}</span>
-                        <span>· {d.reasons} reasons</span>
+                        <span>· {plural(d.reasons, 'reason')}</span>
                         {d.deciders.length > 0 && <span>· {d.deciders.slice(0, 3).join(', ')}</span>}
                       </div>
                     </div>

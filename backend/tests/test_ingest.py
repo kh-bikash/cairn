@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from cairn.ingest import systems as sysmap
 from cairn.ingest.loader import build_rows
-from cairn.ingest.text import child_uid, extract_refs, is_bot, to_ms
+from cairn.ingest.text import child_uid, extract_refs, is_bot, is_design_doc, to_ms
 from tests.fixtures import ALICE, CODERABBIT, DEPENDABOT, api_snapshot, client_snapshot
 
 
@@ -44,6 +44,13 @@ def test_module_kind() -> None:
     assert sysmap.module_kind("examples/data") == "docs"
     assert sysmap.module_kind("app/public") == "assets"
     assert sysmap.module_kind("api/routes") == "code"
+
+
+def test_design_docs_are_decision_records_only() -> None:
+    for path in ("docs/adr/0003-kafka.md", "rfcs/0007-solver.md", "docs/architecture.md", "design-notes.md", "docs/MCP_SERVER_DESIGN.md"):
+        assert is_design_doc(path), path
+    for path in ("README.md", "CONTRIBUTING.md", "SECURITY.md", ".github/PULL_REQUEST_TEMPLATE.md", "docs/address-book.md"):
+        assert not is_design_doc(path), path
 
 
 def test_codeowners_parsing_skips_teams() -> None:
