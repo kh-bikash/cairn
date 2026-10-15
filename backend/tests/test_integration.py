@@ -242,3 +242,23 @@ def test_graph_export_import_round_trip(store: GraphStore, tmp_path: Path) -> No
         assert restored == original, "tools answer identically on the restored graph (full-text indexes included)"
     finally:
         copy.drop()
+
+
+def test_bridge_people_from_collaboration(tmp_path: Path) -> None:
+    """y reviews x's work and z's work; x and z never work together, so y is the bridge."""
+    s = GraphStore(_settings(tmp_path))
+    try:
+        s.query(
+            """
+            CREATE (x:Person {handle: 'x'}), (y:Person {handle: 'y'}), (z:Person {handle: 'z'}),
+                   (x)-[:AUTHORED]->(:Source {kind: 'pr', uid: 'r#1'})<-[:REVIEWED]-(y),
+                   (x)-[:AUTHORED]->(:Source {kind: 'pr', uid: 'r#2'})<-[:REVIEWED]-(y),
+                   (z)-[:AUTHORED]->(:Source {kind: 'pr', uid: 'r#3'})<-[:REVIEWED]-(y),
+                   (z)-[:AUTHORED]->(:Source {kind: 'pr', uid: 'r#4'})<-[:REVIEWED]-(y)
+            """
+        )
+        assert derive_collaboration(s) == 2
+        bridges = Tools(s).bridge_people()
+        assert [b["handle"] for b in bridges] == ["y"], bridges
+    finally:
+        s.drop()

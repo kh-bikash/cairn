@@ -160,8 +160,9 @@ def derive_expertise(store: GraphStore, *, min_score: float = 0.05) -> int:
 def derive_collaboration(store: GraphStore, *, min_weight: float = 2.0) -> int:
     """Project a people↔people `WORKS_WITH` graph from reviews and replies.
 
-    Label propagation oscillates on bipartite graphs (people↔systems), so community detection
-    runs on this one-mode projection instead.
+    Label propagation oscillates on bipartite graphs (people↔systems), so community detection and bridge-people
+    betweenness run on this one-mode projection instead. FalkorDB's algorithms follow edge direction, so each pair
+    is stored both ways: with one direction per pair, paths could only run "alphabetically" between handles.
     """
     rows = store.ro_query(
         """
@@ -177,7 +178,10 @@ def derive_collaboration(store: GraphStore, *, min_weight: float = 2.0) -> int:
     for a, b, w in rows:
         weights[(min(a, b), max(a, b))] += w  # undirected: one edge per pair
     store.query("MATCH ()-[e:WORKS_WITH]->() DELETE e")
-    return store.write_batches(
-        "UNWIND $rows AS r MATCH (a:Person {handle: r.a}), (b:Person {handle: r.b}) MERGE (a)-[e:WORKS_WITH]->(b) SET e.weight = r.w",
-        [{"a": a, "b": b, "w": w} for (a, b), w in weights.items() if w >= min_weight],
+    pairs = [{"a": a, "b": b, "w": w} for (a, b), w in weights.items() if w >= min_weight]
+    store.write_batches(
+        "UNWIND $rows AS r MATCH (a:Person {handle: r.a}), (b:Person {handle: r.b}) "
+        "MERGE (a)-[e:WORKS_WITH]->(b) SET e.weight = r.w MERGE (b)-[f:WORKS_WITH]->(a) SET f.weight = r.w",
+        pairs,
     )
+    return len(pairs)

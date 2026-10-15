@@ -694,15 +694,7 @@ class Tools:
                 sid = sg.node("System", key, name=key, risk=round(top_share, 2))
                 sg.edge(sg.node("Person", top["handle"], name=top["handle"], left=top["left"]), "KNOWS_ABOUT", sid, score=top["score"])
         at_risk.sort(key=lambda m: (m["top_expert_left"] is None, m["bus_factor"], -m["top_share"]))
-        bridges = self.store.records(
-            """
-            CALL algo.betweenness({nodeLabels: ['Person', 'System'], relationshipTypes: ['KNOWS_ABOUT'], samplingSize: 64, samplingSeed: 7})
-            YIELD node, score
-            WITH node, score WHERE 'Person' IN labels(node) AND score > 0 AND node.left IS NULL
-            RETURN node.handle AS handle, score ORDER BY score DESC LIMIT 5
-            """,
-            timeout_ms=30_000,
-        )
+        bridges = self.bridge_people()
         concentration = sorted(({"handle": h, "sole_expert_on": ks} for h, ks in sole.items()), key=lambda x: -len(x["sole_expert_on"]))
         data = {
             "at_risk_modules": at_risk[:15],
@@ -803,6 +795,19 @@ class Tools:
             "decisions": [{"uid": d["uid"], "title": d["title"], "date": fmt_date(d["ts"])} for d in decisions],
         }
         return ToolResult(data, f"{len(events)} events, {len(decisions)} decisions", sg, evidence)
+
+    def bridge_people(self, limit: int = 5) -> list[dict[str, Any]]:
+        """People who connect otherwise separate groups: betweenness over who-works-with-whom (current staff only)."""
+        return self.store.records(
+            """
+            CALL algo.betweenness({nodeLabels: ['Person'], relationshipTypes: ['WORKS_WITH']})
+            YIELD node, score
+            WITH node, score WHERE score > 0 AND node.left IS NULL
+            RETURN node.handle AS handle, score ORDER BY score DESC LIMIT $limit
+            """,
+            {"limit": limit},
+            timeout_ms=30_000,
+        )
 
     def connect(self, a: str, b: str) -> ToolResult:
         """Shortest path between two entities (people, systems, PR/issue uids)."""
