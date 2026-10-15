@@ -46,6 +46,19 @@ class RouteIssueRequest(BaseModel):
     number: int = Field(ge=1)
 
 
+class ChangeRequest(BaseModel):
+    system: str = Field(min_length=1, max_length=200)
+    change: str = Field(default="", max_length=1_000)
+
+
+class IncidentRequest(BaseModel):
+    description: str = Field(min_length=3, max_length=2_000)
+
+
+class HandoffRequest(BaseModel):
+    handle: str = Field(min_length=1, max_length=100)
+
+
 class SyncRequest(BaseModel):
     repos: list[str] = Field(min_length=1, max_length=10)
 
@@ -328,6 +341,42 @@ def create_app() -> FastAPI:
             return await asyncio.to_thread(catalog.system_detail, st(request).store, key)
         except ToolError as exc:
             raise HTTPException(404, str(exc)) from exc
+
+    # ------------------------------------------------------------------ workflows
+    def _result(r: Any) -> dict[str, Any]:
+        return {"summary": r.summary, "data": r.data, "subgraph": r.subgraph.to_dict(), "evidence": [vars(e) for e in r.evidence]}
+
+    async def _workflow(fn: Any, *args: Any) -> dict[str, Any]:
+        try:
+            return _result(await asyncio.to_thread(fn, *args))
+        except ToolError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.post("/api/workflows/change-impact")
+    async def wf_change(body: ChangeRequest, request: Request) -> dict[str, Any]:
+        return await _workflow(st(request).tools.change_impact, body.system, body.change)
+
+    @app.post("/api/workflows/incident")
+    async def wf_incident(body: IncidentRequest, request: Request) -> dict[str, Any]:
+        return await _workflow(st(request).tools.incident_memory, body.description)
+
+    @app.post("/api/workflows/handoff")
+    async def wf_handoff(body: HandoffRequest, request: Request) -> dict[str, Any]:
+        return await _workflow(st(request).tools.handoff_plan, body.handle)
+
+    @app.post("/api/workflows/change-impact/propose", dependencies=[Depends(require_admin)])
+    async def wf_change_propose(body: ChangeRequest, request: Request) -> dict[str, Any]:
+        ws = st(request)
+        result = await asyncio.to_thread(ws.tools.change_impact, body.system, body.change)
+        title = f"Heads-up: planned change to {result.data['system']['key']}"
+        return await _act(ws.actions.propose_issue, title, result.data["draft"])
+
+    @app.post("/api/workflows/handoff/propose", dependencies=[Depends(require_admin)])
+    async def wf_handoff_propose(body: HandoffRequest, request: Request) -> dict[str, Any]:
+        ws = st(request)
+        result = await asyncio.to_thread(ws.tools.handoff_plan, body.handle)
+        handle = result.data["person"]["handle"]
+        return await _act(ws.actions.propose_document, f"handoff/{handle}.md", result.data["draft"], f"Handoff plan for {handle}", f"Handoff plan for {handle}.")
 
     # ------------------------------------------------------------------ repository sync
     @app.get("/api/sync")

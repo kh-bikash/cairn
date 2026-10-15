@@ -21,6 +21,12 @@ if TYPE_CHECKING:
 _INTENTS: list[tuple[str, re.Pattern[str]]] = [
     ("act_wiki", re.compile(r"\b(update|refresh|publish|sync|regenerate)\b.*\b(wiki|knowledge ?base|docs?)\b", re.I)),
     ("act_route", re.compile(r"\b(route|triage|assign)\b.*#\s*\d+", re.I)),
+    ("incident", re.compile(r"\b(incident|outage|is down|went down|broken|failing|errors?|sev ?[12]|paged|alert(?:ing)?|on-?call)\b", re.I)),
+    (
+        "change",
+        re.compile(r"\b(before (?:i|we) change|planning to change|want to change|about to change|rename|deprecate|remove|upgrade|migrat\w*|change to)\b", re.I),
+    ),
+    ("handoff", re.compile(r"\b(handoff|hand over|handover|leaving|resign\w*|going on leave|parental leave|notice period)\b", re.I)),
     ("drift", re.compile(r"\b(drift|stale|outdated|still (true|valid|hold)|no longer|out of date)\b", re.I)),
     ("risk", re.compile(r"\b(bus factor|leaves?|left|quits?|single point|knowledge risk|concentrat\w*|handoff|hand off)\b", re.I)),
     ("teams", re.compile(r"\b(teams?|who works with|groups?)\b", re.I)),
@@ -276,13 +282,19 @@ def route(tools: Tools, question: str, action_repos: list[str] | None = None) ->
     people = find_people(tools, question)
     topic = _STOPWORDS.sub(" ", question).strip(" ?.!") or question
     plan = Plan(intent)
+    if intent == "incident":
+        return Plan(intent, [("incident_memory", {"description": question})])
+    if intent == "change" and systems:
+        return Plan(intent, [("change_impact", {"system": systems[0], "change": question})])
+    if intent == "handoff" and people:
+        return Plan(intent, [("handoff_plan", {"handle": people[0]})])
     if intent in {"who", "impact", "timeline", "search"} and (missing := unmatched_topic(tools, question, systems, people)):
         plan.note = f"I couldn't find anything about “{' '.join(missing)}” in the graph, so I can't answer that reliably."
         return plan
     if intent == "drift":
         plan.calls.append(("drift_report", {}))
     elif intent == "risk":
-        plan.calls.append(("person_profile", {"handle": people[0]}) if people else ("bus_factor", {}))
+        plan.calls.append(("handoff_plan", {"handle": people[0]}) if people else ("bus_factor", {}))
     elif intent == "teams":
         plan.calls.append(("teams", {}))
     elif intent == "connect" and len(systems) + len(people) >= 2:
@@ -446,7 +458,31 @@ def _render_proposal(r: ToolResult, ledger: Ledger) -> str:
     return f"Proposed: **{a['title']}** on {a['repo']}. It is waiting for your approval in the Actions panel and has not run yet."
 
 
+def _render_draft(r: ToolResult, ledger: Ledger) -> str:
+    return str(r.data.get("draft") or r.summary)
+
+
+def _render_incident(r: ToolResult, ledger: Ledger) -> str:
+    d = r.data
+    if not d["similar_incidents"]:
+        return "I found no similar past incident in the graph."
+    lines = ["Similar past incidents:"]
+    for i in d["similar_incidents"]:
+        who = ", ".join(f"@{h['handle']}" for h in i["handled_by"] if not h["left_company"])
+        fix = f" Fix: {i['what_fixed_it']}" if i["what_fixed_it"] else ""
+        lines.append(f"- {i['date']}: {i['title']}{_cite(ledger, i['uid'])}.{fix}" + (f" Handled by {who}." if who else ""))
+    for rb in d["runbooks"]:
+        flag = f" ⚠ possibly outdated: {'; '.join(rb['why'])}" if rb["possibly_outdated"] else ""
+        lines.append(f"\nRunbook: {rb['title']}{_cite(ledger, rb['uid'])}{flag}")
+    if d["who_to_page"]:
+        lines.append("\nWho to page now: " + ", ".join(f"@{p['handle']} ({p['system']})" for p in d["who_to_page"]))
+    return "\n".join(lines)
+
+
 RENDERERS: dict[str, Callable[[ToolResult, Ledger], str]] = {
+    "change_impact": _render_draft,
+    "handoff_plan": _render_draft,
+    "incident_memory": _render_incident,
     "propose_wiki_update": _render_proposal,
     "propose_issue_routing": _render_proposal,
     "why": _render_why,

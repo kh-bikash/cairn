@@ -71,6 +71,24 @@ def suggest_owners(text: str) -> dict[str, Any]:
 
 
 @mcp.tool(annotations=_READ_ONLY)
+def change_impact(system: str, change: str = "") -> dict[str, Any]:
+    """Before changing a system: dependents, constraining decisions, colliding work, and who to notify (with a draft)."""
+    return _out(_tools().change_impact(system, change))
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def incident_memory(description: str) -> dict[str, Any]:
+    """When something breaks: similar past incidents, what fixed them, who handled them, and stale runbooks."""
+    return _out(_tools().incident_memory(description))
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def handoff_plan(handle: str) -> dict[str, Any]:
+    """When someone leaves: what only they know, successors, docs to read, decisions and work to re-own."""
+    return _out(_tools().handoff_plan(handle))
+
+
+@mcp.tool(annotations=_READ_ONLY)
 def details(uid: str) -> dict[str, Any]:
     """Open one PR/issue/doc ('owner/repo#123') or decision ('owner/repo#123::d1') with people, links and decisions."""
     return _out(_tools().details(uid))

@@ -195,7 +195,9 @@ async def test_agent_router_mode_answers_with_citations(store: GraphStore, tmp_p
         ("Who knows the cache best?", ("who_knows", {"system": "acme/api:api/cache"})),
         ("Who knows billing in api?", ("who_knows", {"system": "acme/api:api/billing"})),
         ("What breaks if acme/client goes down?", ("impact", {"system": "acme/client"})),
-        ("What happens if bob leaves?", ("person_profile", {"handle": "bob"})),
+        ("What happens if bob leaves?", ("handoff_plan", {"handle": "bob"})),
+        ("We are about to change the cache, what breaks?", ("change_impact", {"system": "acme/api:api/cache", "change": "We are about to change the cache, what breaks?"})),
+        ("Billing webhook outage: invoices failing", ("incident_memory", {"description": "Billing webhook outage: invoices failing"})),
         ("Why did we choose Redis?", ("why", {"topic": "Redis"})),
     ],
 )
@@ -204,3 +206,15 @@ def test_router_resolves_entities(store: GraphStore, question: str, call: tuple[
 
     _CATALOG.clear()  # catalog is cached per store; tests share one store across graphs
     assert route(Tools(store), question).calls == [call]
+
+
+def test_workflows_on_sample_company(store: GraphStore) -> None:
+    from cairn import workflows as wf
+
+    tools = Tools(store)
+    change = wf.change_impact(tools, "acme/client", "drop the retry endpoint")
+    assert change.data["dependents"][0]["repo"] == "acme/api" and "Heads-up" in change.data["draft"]
+    handoff = wf.handoff_plan(tools, "bob")
+    assert handoff.data["areas"] and "Handoff plan" in handoff.data["draft"]
+    incident = wf.incident_memory(tools, "sessions lost on every deploy")
+    assert any(i["uid"] == "acme/api#5" for i in incident.data["similar_incidents"]) or incident.data["note"]

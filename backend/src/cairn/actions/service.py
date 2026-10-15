@@ -107,6 +107,21 @@ class ActionService:
         preview = f"Open a PR on **{repo}** updating {len(files)} OKF pages under `{WIKI_ROOT}/`.\n\n{body}"
         return self._save("wiki_pr", f"Update knowledge base ({len(files)} pages)", repo, preview, {"files": files, "body": body, "reason": reason})
 
+    def propose_issue(self, title: str, body: str, *, repo: str | None = None) -> Action:
+        """A new issue (e.g. a change heads-up) in the allowed repo, pending approval."""
+        target = self._require_repo(repo or (self.settings.action_repos[0] if self.settings.action_repos else None))
+        text = defang_mentions(body + "\n\n_Drafted by Cairn from the knowledge graph and approved by a human before posting._")
+        preview = f"Open an issue on **{target}**: {title}\n\n{text}"
+        return self._save("issue_create", title[:120], target, preview, {"title": title[:250], "body": text})
+
+    def propose_document(self, path: str, content: str, title: str, reason: str) -> Action:
+        """Add or update one document in the wiki repo via PR (e.g. a handoff plan), pending approval."""
+        repo = self._require_repo(self.settings.wiki_repo)
+        body = defang_mentions(f"{reason}\n\nDrafted by Cairn from the knowledge graph and approved by a human before publishing.")
+        files = {f"{WIKI_ROOT}/{path}": defang_mentions(content)}
+        preview = f"Open a PR on **{repo}** adding `{WIKI_ROOT}/{path}`.\n\n{files[f'{WIKI_ROOT}/{path}']}"
+        return self._save("doc_pr", title[:120], repo, preview, {"files": files, "body": body})
+
     def propose_issue_routing(self, repo: str, number: int) -> Action:
         repo = self._require_repo(repo)
         with self._github() as gh:
@@ -176,6 +191,11 @@ class ActionService:
             with self._github() as gh:
                 if action.kind == "wiki_pr":
                     url = open_pull_request(gh, action.repo, action.payload["files"], title=action.title, body=action.payload["body"])
+                elif action.kind == "doc_pr":
+                    url = open_pull_request(gh, action.repo, action.payload["files"], title=action.title, body=action.payload["body"], prune=False)
+                elif action.kind == "issue_create":
+                    res = gh.rest("POST", f"/repos/{action.repo}/issues", json={"title": action.payload["title"], "body": action.payload["body"]})
+                    url = res["html_url"]
                 elif action.kind == "issue_comment":
                     res = gh.rest("POST", f"/repos/{action.repo}/issues/{action.payload['number']}/comments", json={"body": action.payload["body"]})
                     url = res["html_url"]
@@ -217,15 +237,21 @@ def _pr_url(uid: str) -> str:
     return f"https://github.com/{repo}/pull/{number}"
 
 
-def open_pull_request(gh: GitHubClient, repo: str, files: dict[str, str], *, title: str, body: str) -> str | None:
-    """Commit `files` on a new branch and open a PR. Returns the PR URL, or None if nothing changed."""
+def open_pull_request(gh: GitHubClient, repo: str, files: dict[str, str], *, title: str, body: str, prune: bool = True) -> str | None:
+    """Commit `files` on a new branch and open a PR. Returns the PR URL, or None if nothing changed.
+
+    With `prune`, wiki pages that are no longer generated are deleted (full wiki refresh); without it the
+    PR only adds or updates the given files (e.g. a single handoff document).
+    """
     meta = gh.rest("GET", f"/repos/{repo}")
     base = meta["default_branch"]
     base_sha = gh.rest("GET", f"/repos/{repo}/git/ref/heads/{base}")["object"]["sha"]
     base_tree = gh.rest("GET", f"/repos/{repo}/git/commits/{base_sha}")["tree"]["sha"]
-    # Stale wiki pages (e.g. a decision that no longer exists) are removed by listing them with sha=None.
-    existing = gh.rest("GET", f"/repos/{repo}/git/trees/{base_tree}", params={"recursive": "1"}).get("tree", [])
-    stale = [t["path"] for t in existing if t["type"] == "blob" and t["path"].startswith(f"{WIKI_ROOT}/") and t["path"] not in files]
+    stale: list[str] = []
+    if prune:
+        # Stale wiki pages (e.g. a decision that no longer exists) are removed by listing them with sha=None.
+        existing = gh.rest("GET", f"/repos/{repo}/git/trees/{base_tree}", params={"recursive": "1"}).get("tree", [])
+        stale = [t["path"] for t in existing if t["type"] == "blob" and t["path"].startswith(f"{WIKI_ROOT}/") and t["path"] not in files]
     entries: list[dict[str, Any]] = [{"path": p, "mode": "100644", "type": "blob", "content": c} for p, c in sorted(files.items())]
     entries += [{"path": p, "mode": "100644", "type": "blob", "sha": None} for p in stale]
     tree = gh.rest("POST", f"/repos/{repo}/git/trees", json={"base_tree": base_tree, "tree": entries})

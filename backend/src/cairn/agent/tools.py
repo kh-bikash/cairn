@@ -870,6 +870,22 @@ class Tools:
         }
         return ToolResult(data, f"{len(out)} likely systems", sg, evidence)
 
+    # Workflows: multi-hop walks that end in a draft a human can approve (see cairn.workflows).
+    def change_impact(self, system: str, change: str = "") -> ToolResult:
+        from cairn.workflows import change_impact
+
+        return change_impact(self, system, change)
+
+    def incident_memory(self, description: str) -> ToolResult:
+        from cairn.workflows import incident_memory
+
+        return incident_memory(self, description)
+
+    def handoff_plan(self, handle: str) -> ToolResult:
+        from cairn.workflows import handoff_plan
+
+        return handoff_plan(self, handle)
+
     def drift_report(self, repo: str | None = None) -> ToolResult:
         rows = self.store.records(
             """
@@ -1022,6 +1038,25 @@ TOOL_SPECS: list[dict[str, Any]] = [
     ),
     _fn("drift_report", "Decisions whose premises were contradicted by later evidence.", {"repo": _S}, []),
     _fn("teams", "Inferred de-facto teams (community detection over who works on what).", {}, []),
+    _fn(
+        "change_impact",
+        "Before changing a system: what depends on it (transitively), which decisions constrain it, open work that may collide, "
+        "and who must be told. Returns a draft heads-up.",
+        {"system": _S, "change": {**_S, "description": "what is changing, if known"}},
+        ["system"],
+    ),
+    _fn(
+        "incident_memory",
+        "When something breaks: similar past incidents, what fixed them, who handled them, relevant runbooks and whether they look outdated.",
+        {"description": {**_S, "description": "symptoms in plain words"}},
+        ["description"],
+    ),
+    _fn(
+        "handoff_plan",
+        "When someone leaves or goes on leave: areas only they know, suggested successors, docs to read, decisions to re-own, open work.",
+        {"handle": _S},
+        ["handle"],
+    ),
     _fn(
         "details",
         "Open one item by uid: a PR/issue/doc ('owner/repo#123') with its text, people, links and the decisions made there, or a decision ('owner/repo#123::d1').",
