@@ -27,4 +27,4 @@ USER cairn
 ENV PATH="/app/.venv/bin:$PATH" \
     CAIRN_DATA_DIR=/app/data
 EXPOSE 8000
-CMD ["sh", "-c", "cairn bootstrap; exec uvicorn cairn.api.app:app --host :: --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]
+CMD ["sh", "-c", "cairn bootstrap; exec uvicorn cairn.api.app:app --host ${CAIRN_BIND:-0.0.0.0} --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]

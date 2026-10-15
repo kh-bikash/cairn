@@ -1,0 +1,77 @@
+# Production stack for a single VM: FalkorDB + API + Caddy (automatic HTTPS, serves the web build).
+#   docker compose -f deploy/docker-compose.prod.yml --env-file .env up -d --build
+# Data lives on the host under /opt/cairn-data so it survives rebuilds and reboots.
+name: cairn
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  falkordb:
+    # Same digest as local development, so a dump.rdb moves between them unchanged.
+    image: falkordb/falkordb@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6
+    restart: unless-stopped
+    environment:
+      FALKORDB_ARGS: "MAX_QUEUED_QUERIES 50 TIMEOUT_MAX 120000 TIMEOUT_DEFAULT 30000 RESULTSET_SIZE 20000"
+    volumes:
+      - /opt/cairn-data/falkordb:/var/lib/falkordb/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    mem_limit: 768m
+    logging: *logging
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    image: cairn-api:latest
+    restart: unless-stopped
+    env_file:
+      - path: ../.env
+        required: true
+    environment:
+      CAIRN_FALKORDB_HOST: falkordb
+      CAIRN_FALKORDB_PORT: "6379"
+      CAIRN_DATA_DIR: /app/data
+    volumes:
+      - /opt/cairn-data/api:/app/data
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=5)"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 600s   # first boot on an empty database builds the demo graphs
+    mem_limit: 768m
+    logging: *logging
+
+  caddy:
+    image: caddy:2.10.0-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CAIRN_DOMAIN: ${CAIRN_DOMAIN:?set CAIRN_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../web/dist:/srv/web:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+    mem_limit: 128m
+    logging: *logging
+
+volumes:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,28 @@
+{$CAIRN_DOMAIN} {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# API, including the SSE answer stream: never buffer, never compress.
+	handle /api/* {
+		reverse_proxy api:8000 {
+			flush_interval -1
+		}
+	}
+
+	# The web app (same build as on Vercel), so this host also works on its own.
+	handle {
+		encode zstd gzip
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
