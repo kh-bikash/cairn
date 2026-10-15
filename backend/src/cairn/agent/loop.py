@@ -190,7 +190,7 @@ class Agent:
             except (LLMNotConfigured, openai.APIError) as exc:
                 # Quota exhausted or provider down mid-demo: degrade to deterministic routing instead of failing.
                 log.warning("agent LLM unavailable (%s); falling back to graph router", exc)
-                yield {"type": "notice", "message": f"LLM unavailable ({type(exc).__name__}); answering directly from the graph."}
+                yield {"type": "notice", "message": "The AI model is busy right now, so this answer comes straight from the graph."}
 
         async for event in self._router_answer(question, ledger, used):
             yield event

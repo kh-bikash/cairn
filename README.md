@@ -2,6 +2,8 @@
 
 **The company brain that remembers *why*.** Built on [FalkorDB](https://falkordb.com) for Graph Hacks, Track 03: Company Brain.
 
+**Live:** https://cairn-nine-mu.vercel.app (no sign-up; switch between the FalkorDB and Orbiton workspaces in the sidebar)
+
 Teams lose the reasons behind their decisions. The Slack thread that settled it scrolls away, the person who
 argued for it leaves, and two years later someone "fixes" it back. Cairn reads the places where engineering
 work actually happens (GitHub, Slack, Jira, ADRs, postmortems, runbooks, the org chart) into one FalkorDB graph
@@ -169,6 +171,8 @@ RETURN p.name, d.title, s.key, collect(DISTINCT dep.key) AS still_depends
 ```
 
 ## Deploying publicly
+
+The live site runs on one small AWS VM (FalkorDB + API + Caddy) behind Vercel; see [`deploy/README.md`](deploy/README.md).
 
 - Set `CAIRN_ADMIN_TOKEN`. Reading and asking stay open; every write (sync, proposals, approvals) then needs
   the token, which admins paste once under Settings.

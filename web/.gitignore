@@ -25,6 +25,3 @@ dist-ssr
 
 .vercel
 
-# deployment-specific (holds the current API URL)
-vercel.json
-.vercel
