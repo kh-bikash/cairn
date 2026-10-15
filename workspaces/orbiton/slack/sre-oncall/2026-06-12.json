@@ -1,15 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01019",
-  "text": "Can someone from Platform look at the auth-service dashboard? p99 creeping up.",
-  "ts": "1781266800.000001"
+  "user": "U01020",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on events-pipeline.",
+  "ts": "1781287620.000001"
  },
  {
   "type": "message",
   "user": "U01004",
-  "text": "Looking now.",
-  "ts": "1781267100.000001",
-  "thread_ts": "1781266800.000001"
+  "text": "Done.",
+  "ts": "1781287920.000001",
+  "thread_ts": "1781287620.000001"
  }
 ]

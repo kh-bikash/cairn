@@ -1,8 +1,21 @@
 [
  {
   "type": "message",
-  "user": "U01010",
-  "text": "dispatch-api v2.30.3 is live in staging, prod tomorrow.",
-  "ts": "1777659900.000001"
+  "user": "U01016",
+  "text": "Rolling back analytics-warehouse v4.6.0: error rate up after deploy.",
+  "ts": "1777636800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Ack.",
+  "ts": "1777637100.000001",
+  "thread_ts": "1777636800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "Deployed driver-app v2.19.7 to production.",
+  "ts": "1777646880.000001"
  }
 ]

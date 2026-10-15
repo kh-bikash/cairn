@@ -1,0 +1,35 @@
+[
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Can someone from Platform look at the feature-flags dashboard? p99 creeping up.",
+  "ts": "1762248900.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Done.",
+  "ts": "1762249200.000001",
+  "thread_ts": "1762248900.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Same here.",
+  "ts": "1762249740.000001",
+  "thread_ts": "1762248900.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on checkout-api.",
+  "ts": "1762275240.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "On it.",
+  "ts": "1762275540.000001",
+  "thread_ts": "1762275240.000001"
+ }
+]

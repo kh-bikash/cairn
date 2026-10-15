@@ -1,15 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01017",
-  "text": "auth-service v2.12.4 is live in staging, prod tomorrow.",
-  "ts": "1766044800.000001"
- },
- {
-  "type": "message",
-  "user": "U01015",
-  "text": "👍",
-  "ts": "1766045100.000001",
-  "thread_ts": "1766044800.000001"
+  "user": "U01007",
+  "text": "Deployed ledger-db v3.7.5 to production.",
+  "ts": "1766064900.000001"
  }
 ]

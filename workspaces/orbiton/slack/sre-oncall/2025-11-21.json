@@ -1,8 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01002",
-  "text": "Handing over on-call. Quiet week except a noisy disk alert on route-optimizer.",
-  "ts": "1763724420.000001"
+  "user": "U01020",
+  "text": "Can someone from Platform look at the auth-service dashboard? p99 creeping up.",
+  "ts": "1763741700.000001"
  }
 ]

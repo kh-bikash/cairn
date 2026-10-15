@@ -1,15 +1,21 @@
 [
  {
   "type": "message",
-  "user": "U01009",
-  "text": "Rolling back dispatch-api v4.6.9: error rate up after deploy.",
-  "ts": "1779189000.000001"
+  "user": "U01006",
+  "text": "Deployed payments-service v3.27.6 to production.",
+  "ts": "1779192660.000001"
  },
  {
   "type": "message",
-  "user": "U01009",
+  "user": "U01007",
   "text": "Same here.",
-  "ts": "1779189300.000001",
-  "thread_ts": "1779189000.000001"
+  "ts": "1779192960.000001",
+  "thread_ts": "1779192660.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Rolling back checkout-api v4.27.0: error rate up after deploy.",
+  "ts": "1779196140.000001"
  }
 ]

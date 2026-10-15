@@ -1,35 +1,28 @@
 [
  {
   "type": "message",
-  "user": "U01018",
-  "text": "Can someone from Data look at the events-pipeline dashboard? p99 creeping up.",
-  "ts": "1778058240.000001"
+  "user": "U01019",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on payments-service.",
+  "ts": "1778064420.000001"
  },
  {
   "type": "message",
-  "user": "U01005",
-  "text": "Thanks!",
-  "ts": "1778058540.000001",
-  "thread_ts": "1778058240.000001"
- },
- {
-  "type": "message",
-  "user": "U01002",
-  "text": "Can someone from Product look at the auth-service dashboard? p99 creeping up.",
-  "ts": "1778078760.000001"
- },
- {
-  "type": "message",
-  "user": "U01011",
+  "user": "U01007",
   "text": "Looking now.",
-  "ts": "1778079060.000001",
-  "thread_ts": "1778078760.000001"
+  "ts": "1778064720.000001",
+  "thread_ts": "1778064420.000001"
  },
  {
   "type": "message",
-  "user": "U01009",
-  "text": "👍",
-  "ts": "1778079600.000001",
-  "thread_ts": "1778078760.000001"
+  "user": "U01020",
+  "text": "Can someone from Payments look at the payments-service dashboard? p99 creeping up.",
+  "ts": "1778071620.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Done.",
+  "ts": "1778071920.000001",
+  "thread_ts": "1778071620.000001"
  }
 ]

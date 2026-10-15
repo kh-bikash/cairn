@@ -1,35 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01009",
-  "text": "Deployed dispatch-api v2.19.5 to production.",
-  "ts": "1790849160.000001"
- },
- {
-  "type": "message",
-  "user": "U01009",
-  "text": "Can you share the dashboard link?",
-  "ts": "1790849460.000001",
-  "thread_ts": "1790849160.000001"
- },
- {
-  "type": "message",
-  "user": "U01008",
-  "text": "Deployed ledger-db v2.13.3 to production.",
-  "ts": "1790872500.000001"
- },
- {
-  "type": "message",
-  "user": "U01008",
-  "text": "On it.",
-  "ts": "1790872800.000001",
-  "thread_ts": "1790872500.000001"
- },
- {
-  "type": "message",
-  "user": "U01006",
-  "text": "Looking now.",
-  "ts": "1790873340.000001",
-  "thread_ts": "1790872500.000001"
+  "user": "U01017",
+  "text": "analytics-warehouse v3.10.8 is live in staging, prod tomorrow.",
+  "ts": "1790856480.000001"
  }
 ]

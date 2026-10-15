@@ -1,22 +1,22 @@
 [
  {
   "type": "message",
+  "user": "U01020",
+  "text": "Paged for driver-app latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1771840020.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01013",
+  "text": "Looking now.",
+  "ts": "1771840320.000001",
+  "thread_ts": "1771840020.000001"
+ },
+ {
+  "type": "message",
   "user": "U01015",
-  "text": "Paged for checkout-api latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1771865100.000001"
- },
- {
-  "type": "message",
-  "user": "U01009",
-  "text": "Thanks!",
-  "ts": "1771865400.000001",
-  "thread_ts": "1771865100.000001"
- },
- {
-  "type": "message",
-  "user": "U01002",
-  "text": "Thanks!",
-  "ts": "1771865940.000001",
-  "thread_ts": "1771865100.000001"
+  "text": "Same here.",
+  "ts": "1771840860.000001",
+  "thread_ts": "1771840020.000001"
  }
 ]

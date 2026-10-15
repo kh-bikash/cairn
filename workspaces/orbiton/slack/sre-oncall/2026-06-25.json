@@ -1,22 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01005",
-  "text": "Can someone from Routing look at the feature-flags dashboard? p99 creeping up.",
-  "ts": "1782407520.000001"
+  "user": "U01019",
+  "text": "Paged for driver-app latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1782411780.000001"
  },
  {
   "type": "message",
-  "user": "U01017",
-  "text": "Thanks!",
-  "ts": "1782407820.000001",
-  "thread_ts": "1782407520.000001"
- },
- {
-  "type": "message",
-  "user": "U01001",
-  "text": "Looking now.",
-  "ts": "1782408360.000001",
-  "thread_ts": "1782407520.000001"
+  "user": "U01014",
+  "text": "Ack.",
+  "ts": "1782412080.000001",
+  "thread_ts": "1782411780.000001"
  }
 ]

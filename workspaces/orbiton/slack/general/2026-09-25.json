@@ -1,14 +1,22 @@
 [
  {
   "type": "message",
-  "user": "U01001",
-  "text": "Welcome Priya to the team!",
-  "ts": "1790330040.000001"
+  "user": "U01007",
+  "text": "Reminder: all-hands Thursday at 16:00.",
+  "ts": "1790360400.000001"
  },
  {
   "type": "message",
-  "user": "U01021",
-  "text": "Welcome Rachel to the team!",
-  "ts": "1790330880.000001"
+  "user": "U01012",
+  "text": "Ack.",
+  "ts": "1790360700.000001",
+  "thread_ts": "1790360400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "On it.",
+  "ts": "1790361240.000001",
+  "thread_ts": "1790360400.000001"
  }
 ]

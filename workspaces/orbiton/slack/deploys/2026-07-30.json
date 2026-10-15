@@ -1,8 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01001",
-  "text": "Rolling back notifications-service v3.2.1: error rate up after deploy.",
-  "ts": "1785404640.000001"
+  "user": "U01008",
+  "text": "ledger-db v4.21.8 is live in staging, prod tomorrow.",
+  "ts": "1785415680.000001"
  }
 ]

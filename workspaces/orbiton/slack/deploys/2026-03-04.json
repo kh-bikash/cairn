@@ -1,21 +1,14 @@
 [
  {
   "type": "message",
-  "user": "U01022",
-  "text": "auth-service v4.1.1 is live in staging, prod tomorrow.",
-  "ts": "1772611920.000001"
+  "user": "U01007",
+  "text": "checkout-api v1.12.4 is live in staging, prod tomorrow.",
+  "ts": "1772614560.000001"
  },
  {
   "type": "message",
-  "user": "U01019",
-  "text": "Same here.",
-  "ts": "1772612220.000001",
-  "thread_ts": "1772611920.000001"
- },
- {
-  "type": "message",
-  "user": "U01014",
-  "text": "Rolling back auth-service v2.20.1: error rate up after deploy.",
-  "ts": "1772633460.000001"
+  "user": "U01001",
+  "text": "auth-service v4.14.4 is live in staging, prod tomorrow.",
+  "ts": "1772649300.000001"
  }
 ]

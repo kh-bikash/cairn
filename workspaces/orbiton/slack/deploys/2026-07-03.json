@@ -1,22 +1,22 @@
 [
  {
   "type": "message",
-  "user": "U01007",
-  "text": "ledger-db v2.21.4 is live in staging, prod tomorrow.",
-  "ts": "1783082820.000001"
+  "user": "U01001",
+  "text": "Deployed auth-service v4.28.1 to production.",
+  "ts": "1783092120.000001"
  },
  {
   "type": "message",
-  "user": "U01007",
-  "text": "Looking now.",
-  "ts": "1783083120.000001",
-  "thread_ts": "1783082820.000001"
- },
- {
-  "type": "message",
-  "user": "U01007",
+  "user": "U01003",
   "text": "👍",
-  "ts": "1783083660.000001",
-  "thread_ts": "1783082820.000001"
+  "ts": "1783092420.000001",
+  "thread_ts": "1783092120.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "On it.",
+  "ts": "1783092960.000001",
+  "thread_ts": "1783092120.000001"
  }
 ]

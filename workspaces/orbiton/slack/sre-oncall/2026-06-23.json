@@ -1,8 +1,0 @@
-[
- {
-  "type": "message",
-  "user": "U01019",
-  "text": "Paged for notifications-service latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1782211920.000001"
- }
-]

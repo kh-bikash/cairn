@@ -1,28 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01010",
-  "text": "Deployed dispatch-api v4.3.5 to production.",
-  "ts": "1773062400.000001"
- },
- {
-  "type": "message",
-  "user": "U01008",
-  "text": "Deployed ledger-db v4.27.2 to production.",
-  "ts": "1773070500.000001"
- },
- {
-  "type": "message",
-  "user": "U01006",
-  "text": "Looking now.",
-  "ts": "1773070800.000001",
-  "thread_ts": "1773070500.000001"
- },
- {
-  "type": "message",
-  "user": "U01005",
-  "text": "👍",
-  "ts": "1773071340.000001",
-  "thread_ts": "1773070500.000001"
+  "user": "U01018",
+  "text": "warehouse-db v2.29.4 is live in staging, prod tomorrow.",
+  "ts": "1773066540.000001"
  }
 ]

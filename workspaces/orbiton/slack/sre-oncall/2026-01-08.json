@@ -1,21 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01017",
-  "text": "Paged for route-optimizer latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1767862560.000001"
- },
- {
-  "type": "message",
-  "user": "U01015",
-  "text": "Handing over on-call. Quiet week except a noisy disk alert on payments-service.",
-  "ts": "1767862680.000001"
- },
- {
-  "type": "message",
-  "user": "U01002",
-  "text": "Can you share the dashboard link?",
-  "ts": "1767862980.000001",
-  "thread_ts": "1767862680.000001"
+  "user": "U01020",
+  "text": "Can someone from Payments look at the payments-service dashboard? p99 creeping up.",
+  "ts": "1767859920.000001"
  }
 ]

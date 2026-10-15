@@ -1,8 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01007",
-  "text": "ledger-db v1.0.9 is live in staging, prod tomorrow.",
-  "ts": "1770920580.000001"
+  "user": "U01009",
+  "text": "Deployed route-optimizer v3.14.0 to production.",
+  "ts": "1770907440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
+  "text": "Can you share the dashboard link?",
+  "ts": "1770907740.000001",
+  "thread_ts": "1770907440.000001"
  }
 ]

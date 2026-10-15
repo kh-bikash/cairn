@@ -1,22 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01016",
-  "text": "warehouse-db v3.24.8 is live in staging, prod tomorrow.",
-  "ts": "1767866700.000001"
- },
- {
-  "type": "message",
-  "user": "U01018",
-  "text": "Looking now.",
-  "ts": "1767867000.000001",
-  "thread_ts": "1767866700.000001"
+  "user": "U01017",
+  "text": "Deployed warehouse-db v1.15.3 to production.",
+  "ts": "1767884520.000001"
  },
  {
   "type": "message",
   "user": "U01016",
-  "text": "On it.",
-  "ts": "1767867540.000001",
-  "thread_ts": "1767866700.000001"
+  "text": "👍",
+  "ts": "1767884820.000001",
+  "thread_ts": "1767884520.000001"
  }
 ]

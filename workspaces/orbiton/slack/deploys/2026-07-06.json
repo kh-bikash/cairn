@@ -1,15 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01003",
-  "text": "Deployed auth-service v1.17.9 to production.",
-  "ts": "1783352940.000001"
- },
- {
-  "type": "message",
-  "user": "U01003",
-  "text": "Ack.",
-  "ts": "1783353240.000001",
-  "thread_ts": "1783352940.000001"
+  "user": "U01001",
+  "text": "auth-service v4.3.8 is live in staging, prod tomorrow.",
+  "ts": "1783331160.000001"
  }
 ]

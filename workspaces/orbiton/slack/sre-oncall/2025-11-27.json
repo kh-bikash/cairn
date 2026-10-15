@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Paged for route-optimizer latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1764269520.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "👍",
+  "ts": "1764269820.000001",
+  "thread_ts": "1764269520.000001"
+ }
+]

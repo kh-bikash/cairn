@@ -1,8 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01019",
-  "text": "payments-service v4.17.0 is live in staging, prod tomorrow.",
-  "ts": "1763652000.000001"
+  "user": "U01016",
+  "text": "analytics-warehouse v2.13.3 is live in staging, prod tomorrow.",
+  "ts": "1763661960.000001"
  }
 ]

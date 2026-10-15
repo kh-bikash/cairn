@@ -1,14 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01023",
-  "text": "Can someone from SRE look at the payments-service dashboard? p99 creeping up.",
-  "ts": "1775551320.000001"
+  "user": "U01020",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on route-optimizer.",
+  "ts": "1775548860.000001"
  },
  {
   "type": "message",
-  "user": "U01016",
-  "text": "Paged for analytics-warehouse latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1775572680.000001"
+  "user": "U01011",
+  "text": "Can you share the dashboard link?",
+  "ts": "1775549160.000001",
+  "thread_ts": "1775548860.000001"
  }
 ]

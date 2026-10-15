@@ -1,8 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01005",
-  "text": "Handing over on-call. Quiet week except a noisy disk alert on analytics-warehouse.",
-  "ts": "1776342180.000001"
+  "user": "U01020",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on feature-flags.",
+  "ts": "1776348660.000001"
  }
 ]

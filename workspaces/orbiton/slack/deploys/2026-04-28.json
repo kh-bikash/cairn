@@ -1,8 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01012",
-  "text": "Rolling back driver-app v4.17.2: error rate up after deploy.",
-  "ts": "1777383180.000001"
+  "user": "U01009",
+  "text": "route-optimizer v2.8.8 is live in staging, prod tomorrow.",
+  "ts": "1777387620.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "Same here.",
+  "ts": "1777387920.000001",
+  "thread_ts": "1777387620.000001"
  }
 ]

@@ -1,8 +1,28 @@
 [
  {
   "type": "message",
-  "user": "U01017",
-  "text": "warehouse-db v3.19.3 is live in staging, prod tomorrow.",
-  "ts": "1764341700.000001"
+  "user": "U01003",
+  "text": "Rolling back notifications-service v1.14.0: error rate up after deploy.",
+  "ts": "1764327840.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Looking now.",
+  "ts": "1764328140.000001",
+  "thread_ts": "1764327840.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Ack.",
+  "ts": "1764328680.000001",
+  "thread_ts": "1764327840.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Deployed ledger-db v2.29.4 to production.",
+  "ts": "1764331380.000001"
  }
 ]

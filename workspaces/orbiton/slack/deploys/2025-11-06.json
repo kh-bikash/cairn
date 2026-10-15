@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "checkout-api v4.9.6 is live in staging, prod tomorrow.",
+  "ts": "1762432860.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "Rolling back driver-app v3.22.5: error rate up after deploy.",
+  "ts": "1762451400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01012",
+  "text": "On it.",
+  "ts": "1762451700.000001",
+  "thread_ts": "1762451400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01014",
+  "text": "Same here.",
+  "ts": "1762452240.000001",
+  "thread_ts": "1762451400.000001"
+ }
+]

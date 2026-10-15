@@ -1,8 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01005",
-  "text": "ledger-db v4.30.9 is live in staging, prod tomorrow.",
-  "ts": "1765528020.000001"
+  "user": "U01002",
+  "text": "auth-service v3.20.2 is live in staging, prod tomorrow.",
+  "ts": "1765530180.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "Done.",
+  "ts": "1765530480.000001",
+  "thread_ts": "1765530180.000001"
  }
 ]

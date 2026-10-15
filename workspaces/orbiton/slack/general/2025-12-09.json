@@ -1,0 +1,21 @@
+[
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1765293420.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "👍",
+  "ts": "1765293720.000001",
+  "thread_ts": "1765293420.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "Reminder: all-hands Thursday at 16:00.",
+  "ts": "1765295340.000001"
+ }
+]

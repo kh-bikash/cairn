@@ -2,21 +2,27 @@
  {
   "type": "message",
   "user": "U01020",
-  "text": "Can someone from Data look at the analytics-warehouse dashboard? p99 creeping up.",
-  "ts": "1765184220.000001"
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on payments-service.",
+  "ts": "1765180920.000001"
  },
  {
   "type": "message",
-  "user": "U01018",
-  "text": "On it.",
-  "ts": "1765184520.000001",
-  "thread_ts": "1765184220.000001"
+  "user": "U01005",
+  "text": "Thanks!",
+  "ts": "1765181220.000001",
+  "thread_ts": "1765180920.000001"
  },
  {
   "type": "message",
-  "user": "U01017",
-  "text": "Can you share the dashboard link?",
-  "ts": "1765185060.000001",
-  "thread_ts": "1765184220.000001"
+  "user": "U01006",
+  "text": "Same here.",
+  "ts": "1765181760.000001",
+  "thread_ts": "1765180920.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Paged for events-pipeline latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1765218540.000001"
  }
 ]

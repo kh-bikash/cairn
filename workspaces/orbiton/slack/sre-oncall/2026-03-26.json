@@ -2,21 +2,21 @@
  {
   "type": "message",
   "user": "U01020",
-  "text": "Handing over on-call. Quiet week except a noisy disk alert on route-optimizer.",
-  "ts": "1774512060.000001"
+  "text": "Can someone from Data look at the warehouse-db dashboard? p99 creeping up.",
+  "ts": "1774546140.000001"
  },
  {
   "type": "message",
-  "user": "U01011",
-  "text": "Can you share the dashboard link?",
-  "ts": "1774512360.000001",
-  "thread_ts": "1774512060.000001"
+  "user": "U01018",
+  "text": "Thanks!",
+  "ts": "1774546440.000001",
+  "thread_ts": "1774546140.000001"
  },
  {
   "type": "message",
-  "user": "U01010",
-  "text": "Same here.",
-  "ts": "1774512900.000001",
-  "thread_ts": "1774512060.000001"
+  "user": "U01017",
+  "text": "Thanks!",
+  "ts": "1774546980.000001",
+  "thread_ts": "1774546140.000001"
  }
 ]

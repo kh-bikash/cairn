@@ -1,15 +1,22 @@
 [
  {
   "type": "message",
-  "user": "U01005",
+  "user": "U01002",
   "text": "Reminder: all-hands Thursday at 16:00.",
-  "ts": "1768471200.000001"
+  "ts": "1768477980.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Looking now.",
+  "ts": "1768478280.000001",
+  "thread_ts": "1768477980.000001"
  },
  {
   "type": "message",
   "user": "U01013",
-  "text": "👍",
-  "ts": "1768471500.000001",
-  "thread_ts": "1768471200.000001"
+  "text": "Done.",
+  "ts": "1768478820.000001",
+  "thread_ts": "1768477980.000001"
  }
 ]

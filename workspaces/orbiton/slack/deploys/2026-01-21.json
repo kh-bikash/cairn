@@ -1,15 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01001",
-  "text": "Deployed auth-service v1.3.5 to production.",
-  "ts": "1768999500.000001"
- },
- {
-  "type": "message",
-  "user": "U01018",
-  "text": "Can you share the dashboard link?",
-  "ts": "1768999800.000001",
-  "thread_ts": "1768999500.000001"
+  "user": "U01002",
+  "text": "Rolling back events-pipeline v3.30.2: error rate up after deploy.",
+  "ts": "1768992960.000001"
  }
 ]

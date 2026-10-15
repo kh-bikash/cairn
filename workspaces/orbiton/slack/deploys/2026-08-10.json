@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Deployed route-optimizer v1.23.8 to production.",
+  "ts": "1786357080.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Ack.",
+  "ts": "1786357380.000001",
+  "thread_ts": "1786357080.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "Ack.",
+  "ts": "1786357920.000001",
+  "thread_ts": "1786357080.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "feature-flags v3.2.7 is live in staging, prod tomorrow.",
+  "ts": "1786378860.000001"
+ }
+]

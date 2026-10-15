@@ -1,8 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01017",
-  "text": "Rolling back analytics-warehouse v2.7.0: error rate up after deploy.",
-  "ts": "1790762940.000001"
+  "user": "U01007",
+  "text": "Deployed payments-service v4.10.1 to production.",
+  "ts": "1790759520.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Can you share the dashboard link?",
+  "ts": "1790759820.000001",
+  "thread_ts": "1790759520.000001"
  }
 ]

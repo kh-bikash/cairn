@@ -3,6 +3,12 @@
   "type": "message",
   "user": "U01016",
   "text": "Office closed Friday for the public holiday.",
-  "ts": "1784192100.000001"
+  "ts": "1784206380.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1784227800.000001"
  }
 ]

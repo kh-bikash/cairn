@@ -2,7 +2,7 @@
  {
   "type": "message",
   "user": "U01019",
-  "text": "Handing over on-call. Quiet week except a noisy disk alert on payments-service.",
-  "ts": "1773401940.000001"
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on analytics-warehouse.",
+  "ts": "1773400260.000001"
  }
 ]

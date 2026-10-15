@@ -1,8 +1,48 @@
 [
  {
   "type": "message",
-  "user": "U01003",
+  "user": "U01011",
   "text": "Office closed Friday for the public holiday.",
-  "ts": "1778513100.000001"
+  "ts": "1778501040.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1778516400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "On it.",
+  "ts": "1778516700.000001",
+  "thread_ts": "1778516400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "Done.",
+  "ts": "1778517240.000001",
+  "thread_ts": "1778516400.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Reminder: all-hands Thursday at 16:00.",
+  "ts": "1778525520.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Done.",
+  "ts": "1778525820.000001",
+  "thread_ts": "1778525520.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Ack.",
+  "ts": "1778526360.000001",
+  "thread_ts": "1778525520.000001"
  }
 ]

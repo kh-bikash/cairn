@@ -1,22 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01021",
-  "text": "Handing over on-call. Quiet week except a noisy disk alert on driver-app.",
-  "ts": "1787322300.000001"
- },
- {
-  "type": "message",
-  "user": "U01014",
-  "text": "Looking now.",
-  "ts": "1787322600.000001",
-  "thread_ts": "1787322300.000001"
- },
- {
-  "type": "message",
-  "user": "U01013",
-  "text": "Ack.",
-  "ts": "1787323140.000001",
-  "thread_ts": "1787322300.000001"
+  "user": "U01020",
+  "text": "Can someone from Mobile look at the driver-app dashboard? p99 creeping up.",
+  "ts": "1787308740.000001"
  }
 ]

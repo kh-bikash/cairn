@@ -1,8 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01001",
-  "text": "Deployed events-pipeline v3.19.0 to production.",
-  "ts": "1762960200.000001"
+  "user": "U01005",
+  "text": "Rolling back ledger-db v3.15.2: error rate up after deploy.",
+  "ts": "1762940820.000001"
  }
 ]

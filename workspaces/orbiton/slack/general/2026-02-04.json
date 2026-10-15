@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Reminder: all-hands Thursday at 16:00.",
+  "ts": "1770203580.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "On it.",
+  "ts": "1770203880.000001",
+  "thread_ts": "1770203580.000001"
+ }
+]

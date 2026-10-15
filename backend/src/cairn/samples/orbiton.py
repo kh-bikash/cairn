@@ -20,6 +20,7 @@ from __future__ import annotations
 import csv
 import json
 import random
+import shutil
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -339,6 +340,14 @@ _BG = {
 _BG_REPLIES = ["Thanks!", "On it.", "Looking now.", "Ack.", "👍", "Done.", "Can you share the dashboard link?", "Same here."]
 
 
+def _recent_joiner(when: datetime) -> str | None:
+    """First name of someone who joined in the 10 days before `when`, if any."""
+    for _, name, _, _, _, joined, _ in PEOPLE:
+        if timedelta(0) <= when - _d(joined) <= timedelta(days=10):
+            return name.split()[0]
+    return None
+
+
 def background(rng: random.Random) -> list[Msg]:
     """Routine chatter, posted by the people who would really post it (owning team, SRE, data team)."""
     people = [p[0] for p in PEOPLE]
@@ -360,11 +369,15 @@ def background(rng: random.Random) -> list[Msg]:
                 sys = rng.choice(data_systems if channel == "data" else systems)
                 when = day.replace(hour=rng.randint(8, 18), minute=rng.randint(0, 59))
                 author_team = {"deploys": owner_of[sys], "sre-oncall": "sre", "data": "data", "general": None}[channel]
-                text = rng.choice(_BG[channel]).format(
+                template = rng.choice(_BG[channel])
+                newcomer = _recent_joiner(when)
+                if "{person}" in template and newcomer is None:
+                    template = _BG["general"][0]  # only welcome people who actually just joined
+                text = template.format(
                     sys=sys,
                     ver=f"v{rng.randint(1, 4)}.{rng.randint(0, 30)}.{rng.randint(0, 9)}",
                     team=next(t[1] for t in TEAMS if t[0] == owner_of[sys]),
-                    person=PEOPLE[rng.randrange(len(PEOPLE))][1].split()[0],
+                    person=newcomer or "",
                 )
                 out.append(Msg(channel, when, pick(author_team, when), text))
                 for i in range(rng.choice([0, 0, 1, 2])):
@@ -1041,6 +1054,10 @@ def _slack_ts(dt: datetime, seq: int = 0) -> str:
 def write(out: Path, seed: int = 7) -> dict[str, int]:
     rng = random.Random(seed)
     out.mkdir(parents=True, exist_ok=True)
+    # The generator owns these folders: clear them so files from an earlier run can't linger.
+    for owned in ("slack", "docs"):
+        if (out / owned).exists():
+            shutil.rmtree(out / owned)
     (out / "workspace.toml").write_text(
         f'name = "{COMPANY}"\ndescription = "Fictional logistics company. Sample data in Slack, Jira and markdown export formats."\n', encoding="utf-8"
     )

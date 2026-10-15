@@ -2,34 +2,20 @@
  {
   "type": "message",
   "user": "U01019",
-  "text": "Paged for auth-service latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1770388980.000001"
+  "text": "Can someone from Routing look at the dispatch-api dashboard? p99 creeping up.",
+  "ts": "1770372420.000001"
  },
  {
   "type": "message",
-  "user": "U01003",
-  "text": "Ack.",
-  "ts": "1770389280.000001",
-  "thread_ts": "1770388980.000001"
+  "user": "U01010",
+  "text": "On it.",
+  "ts": "1770372720.000001",
+  "thread_ts": "1770372420.000001"
  },
  {
   "type": "message",
   "user": "U01020",
   "text": "Can someone from Routing look at the dispatch-api dashboard? p99 creeping up.",
-  "ts": "1770402900.000001"
- },
- {
-  "type": "message",
-  "user": "U01010",
-  "text": "Looking now.",
-  "ts": "1770403200.000001",
-  "thread_ts": "1770402900.000001"
- },
- {
-  "type": "message",
-  "user": "U01010",
-  "text": "Done.",
-  "ts": "1770403740.000001",
-  "thread_ts": "1770402900.000001"
+  "ts": "1770398520.000001"
  }
 ]

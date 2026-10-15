@@ -1,8 +1,28 @@
 [
  {
   "type": "message",
-  "user": "U01009",
-  "text": "route-optimizer v2.4.2 is live in staging, prod tomorrow.",
-  "ts": "1773227820.000001"
+  "user": "U01002",
+  "text": "feature-flags v1.3.0 is live in staging, prod tomorrow.",
+  "ts": "1773232380.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "👍",
+  "ts": "1773232680.000001",
+  "thread_ts": "1773232380.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Can you share the dashboard link?",
+  "ts": "1773233220.000001",
+  "thread_ts": "1773232380.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "dispatch-api v2.8.0 is live in staging, prod tomorrow.",
+  "ts": "1773251520.000001"
  }
 ]

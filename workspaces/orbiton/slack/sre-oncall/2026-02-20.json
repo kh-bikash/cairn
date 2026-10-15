@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Paged for events-pipeline latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1771584540.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01002",
+  "text": "On it.",
+  "ts": "1771584840.000001",
+  "thread_ts": "1771584540.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Ack.",
+  "ts": "1771585380.000001",
+  "thread_ts": "1771584540.000001"
+ }
+]

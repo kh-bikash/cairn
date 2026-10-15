@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1772528700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Thanks!",
+  "ts": "1772529000.000001",
+  "thread_ts": "1772528700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "On it.",
+  "ts": "1772529540.000001",
+  "thread_ts": "1772528700.000001"
+ }
+]

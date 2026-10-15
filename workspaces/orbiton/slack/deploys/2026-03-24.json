@@ -1,22 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01017",
-  "text": "Rolling back route-optimizer v4.9.5: error rate up after deploy.",
-  "ts": "1774362780.000001"
- },
- {
-  "type": "message",
-  "user": "U01011",
-  "text": "Thanks!",
-  "ts": "1774363080.000001",
-  "thread_ts": "1774362780.000001"
- },
- {
-  "type": "message",
-  "user": "U01016",
-  "text": "Can you share the dashboard link?",
-  "ts": "1774363620.000001",
-  "thread_ts": "1774362780.000001"
+  "user": "U01003",
+  "text": "Rolling back feature-flags v4.18.0: error rate up after deploy.",
+  "ts": "1774353120.000001"
  }
 ]

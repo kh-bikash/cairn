@@ -1,22 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01006",
-  "text": "checkout-api v1.12.4 is live in staging, prod tomorrow.",
-  "ts": "1771872180.000001"
- },
- {
-  "type": "message",
-  "user": "U01005",
-  "text": "Done.",
-  "ts": "1771872480.000001",
-  "thread_ts": "1771872180.000001"
- },
- {
-  "type": "message",
-  "user": "U01007",
-  "text": "Same here.",
-  "ts": "1771873020.000001",
-  "thread_ts": "1771872180.000001"
+  "user": "U01009",
+  "text": "Deployed dispatch-api v4.7.7 to production.",
+  "ts": "1771862220.000001"
  }
 ]

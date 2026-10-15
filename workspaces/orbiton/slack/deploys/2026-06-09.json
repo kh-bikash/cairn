@@ -1,8 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01010",
-  "text": "Deployed analytics-warehouse v1.5.7 to production.",
-  "ts": "1781027460.000001"
+  "user": "U01006",
+  "text": "Deployed payments-service v2.29.4 to production.",
+  "ts": "1781002680.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Looking now.",
+  "ts": "1781002980.000001",
+  "thread_ts": "1781002680.000001"
  }
 ]

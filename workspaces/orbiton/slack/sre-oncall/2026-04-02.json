@@ -2,21 +2,7 @@
  {
   "type": "message",
   "user": "U01019",
-  "text": "Handing over on-call. Quiet week except a noisy disk alert on dispatch-api.",
-  "ts": "1775150640.000001"
- },
- {
-  "type": "message",
-  "user": "U01009",
-  "text": "Ack.",
-  "ts": "1775150940.000001",
-  "thread_ts": "1775150640.000001"
- },
- {
-  "type": "message",
-  "user": "U01009",
-  "text": "Ack.",
-  "ts": "1775151480.000001",
-  "thread_ts": "1775150640.000001"
+  "text": "Paged for events-pipeline latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1775147640.000001"
  }
 ]

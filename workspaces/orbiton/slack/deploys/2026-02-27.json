@@ -2,34 +2,20 @@
  {
   "type": "message",
   "user": "U01001",
-  "text": "events-pipeline v2.8.4 is live in staging, prod tomorrow.",
-  "ts": "1772213460.000001"
+  "text": "events-pipeline v4.20.2 is live in staging, prod tomorrow.",
+  "ts": "1772181720.000001"
  },
  {
   "type": "message",
-  "user": "U01002",
-  "text": "👍",
-  "ts": "1772213760.000001",
-  "thread_ts": "1772213460.000001"
+  "user": "U01010",
+  "text": "route-optimizer v1.11.2 is live in staging, prod tomorrow.",
+  "ts": "1772186280.000001"
  },
  {
   "type": "message",
-  "user": "U01001",
-  "text": "Done.",
-  "ts": "1772214300.000001",
-  "thread_ts": "1772213460.000001"
- },
- {
-  "type": "message",
-  "user": "U01003",
-  "text": "Deployed feature-flags v2.10.9 to production.",
-  "ts": "1772216940.000001"
- },
- {
-  "type": "message",
-  "user": "U01001",
-  "text": "On it.",
-  "ts": "1772217240.000001",
-  "thread_ts": "1772216940.000001"
+  "user": "U01010",
+  "text": "Looking now.",
+  "ts": "1772186580.000001",
+  "thread_ts": "1772186280.000001"
  }
 ]

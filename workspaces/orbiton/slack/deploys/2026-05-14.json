@@ -1,8 +1,28 @@
 [
  {
   "type": "message",
-  "user": "U01007",
-  "text": "Deployed checkout-api v1.11.5 to production.",
-  "ts": "1778753580.000001"
+  "user": "U01011",
+  "text": "Rolling back route-optimizer v2.27.8: error rate up after deploy.",
+  "ts": "1778781840.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
+  "text": "dispatch-api v2.30.3 is live in staging, prod tomorrow.",
+  "ts": "1778783100.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Looking now.",
+  "ts": "1778783400.000001",
+  "thread_ts": "1778783100.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "Thanks!",
+  "ts": "1778783940.000001",
+  "thread_ts": "1778783100.000001"
  }
 ]

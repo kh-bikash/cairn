@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Can someone from Routing look at the dispatch-api dashboard? p99 creeping up.",
+  "ts": "1771439700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "👍",
+  "ts": "1771440000.000001",
+  "thread_ts": "1771439700.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
+  "text": "Looking now.",
+  "ts": "1771440540.000001",
+  "thread_ts": "1771439700.000001"
+ }
+]

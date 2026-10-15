@@ -1,22 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01021",
-  "text": "Rolling back warehouse-db v4.4.0: error rate up after deploy.",
-  "ts": "1787742360.000001"
- },
- {
-  "type": "message",
-  "user": "U01009",
-  "text": "👍",
-  "ts": "1787742660.000001",
-  "thread_ts": "1787742360.000001"
- },
- {
-  "type": "message",
-  "user": "U01018",
-  "text": "Can you share the dashboard link?",
-  "ts": "1787743200.000001",
-  "thread_ts": "1787742360.000001"
+  "user": "U01008",
+  "text": "checkout-api v1.21.2 is live in staging, prod tomorrow.",
+  "ts": "1787733900.000001"
  }
 ]

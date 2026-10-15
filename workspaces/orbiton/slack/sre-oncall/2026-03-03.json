@@ -2,14 +2,21 @@
  {
   "type": "message",
   "user": "U01019",
-  "text": "Paged for ledger-db latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1772525760.000001"
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on payments-service.",
+  "ts": "1772533800.000001"
  },
  {
   "type": "message",
-  "user": "U01008",
+  "user": "U01006",
   "text": "Thanks!",
-  "ts": "1772526060.000001",
-  "thread_ts": "1772525760.000001"
+  "ts": "1772534100.000001",
+  "thread_ts": "1772533800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Looking now.",
+  "ts": "1772534640.000001",
+  "thread_ts": "1772533800.000001"
  }
 ]

@@ -1,8 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01017",
-  "text": "Welcome Fatima to the team!",
-  "ts": "1767863280.000001"
+  "user": "U01020",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1767876540.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Thanks!",
+  "ts": "1767876840.000001",
+  "thread_ts": "1767876540.000001"
  }
 ]

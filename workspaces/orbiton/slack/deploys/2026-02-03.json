@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Deployed ledger-db v1.23.0 to production.",
+  "ts": "1770144000.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "On it.",
+  "ts": "1770144300.000001",
+  "thread_ts": "1770144000.000001"
+ }
+]

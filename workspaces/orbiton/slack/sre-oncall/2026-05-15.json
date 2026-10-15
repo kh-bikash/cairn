@@ -1,22 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01019",
-  "text": "Paged for auth-service latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1778834100.000001"
- },
- {
-  "type": "message",
-  "user": "U01001",
-  "text": "Thanks!",
-  "ts": "1778834400.000001",
-  "thread_ts": "1778834100.000001"
- },
- {
-  "type": "message",
-  "user": "U01002",
-  "text": "On it.",
-  "ts": "1778834940.000001",
-  "thread_ts": "1778834100.000001"
+  "user": "U01020",
+  "text": "Can someone from Platform look at the notifications-service dashboard? p99 creeping up.",
+  "ts": "1778839080.000001"
  }
 ]

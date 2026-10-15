@@ -1,8 +1,22 @@
 [
  {
   "type": "message",
-  "user": "U01011",
-  "text": "Rolling back route-optimizer v2.9.4: error rate up after deploy.",
-  "ts": "1769623260.000001"
+  "user": "U01003",
+  "text": "Deployed events-pipeline v1.20.2 to production.",
+  "ts": "1769596080.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01003",
+  "text": "Thanks!",
+  "ts": "1769596380.000001",
+  "thread_ts": "1769596080.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Done.",
+  "ts": "1769596920.000001",
+  "thread_ts": "1769596080.000001"
  }
 ]

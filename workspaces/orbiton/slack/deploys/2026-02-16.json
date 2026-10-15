@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Rolling back dispatch-api v1.28.6: error rate up after deploy.",
+  "ts": "1771251600.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
+  "text": "Looking now.",
+  "ts": "1771251900.000001",
+  "thread_ts": "1771251600.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "Can you share the dashboard link?",
+  "ts": "1771252440.000001",
+  "thread_ts": "1771251600.000001"
+ }
+]

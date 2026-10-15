@@ -1,15 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01006",
-  "text": "Welcome Hannah to the team!",
-  "ts": "1773303960.000001"
- },
- {
-  "type": "message",
-  "user": "U01002",
-  "text": "Looking now.",
-  "ts": "1773304260.000001",
-  "thread_ts": "1773303960.000001"
+  "user": "U01016",
+  "text": "Reminder: all-hands Thursday at 16:00.",
+  "ts": "1773302580.000001"
  }
 ]

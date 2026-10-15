@@ -1,22 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01015",
-  "text": "Paged for events-pipeline latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1785846180.000001"
- },
- {
-  "type": "message",
-  "user": "U01009",
-  "text": "Done.",
-  "ts": "1785846480.000001",
-  "thread_ts": "1785846180.000001"
- },
- {
-  "type": "message",
-  "user": "U01019",
-  "text": "Thanks!",
-  "ts": "1785847020.000001",
-  "thread_ts": "1785846180.000001"
+  "user": "U01020",
+  "text": "Paged for driver-app latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1785837420.000001"
  }
 ]

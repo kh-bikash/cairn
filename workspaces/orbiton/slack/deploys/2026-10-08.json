@@ -1,8 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01001",
-  "text": "analytics-warehouse v2.26.0 is live in staging, prod tomorrow.",
-  "ts": "1791447660.000001"
+  "user": "U01009",
+  "text": "Rolling back dispatch-api v2.1.8: error rate up after deploy.",
+  "ts": "1791452400.000001"
  }
 ]

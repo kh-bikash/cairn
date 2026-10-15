@@ -2,7 +2,7 @@
  {
   "type": "message",
   "user": "U01019",
-  "text": "Can someone from Payments look at the checkout-api dashboard? p99 creeping up.",
-  "ts": "1768464180.000001"
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on checkout-api.",
+  "ts": "1768490400.000001"
  }
 ]

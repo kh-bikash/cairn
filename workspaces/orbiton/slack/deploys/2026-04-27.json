@@ -1,14 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01002",
-  "text": "checkout-api v2.14.4 is live in staging, prod tomorrow.",
-  "ts": "1777285620.000001"
+  "user": "U01016",
+  "text": "Deployed warehouse-db v1.7.1 to production.",
+  "ts": "1777294620.000001"
  },
  {
   "type": "message",
-  "user": "U01008",
-  "text": "Rolling back analytics-warehouse v2.11.5: error rate up after deploy.",
-  "ts": "1777312800.000001"
+  "user": "U01016",
+  "text": "Done.",
+  "ts": "1777294920.000001",
+  "thread_ts": "1777294620.000001"
  }
 ]

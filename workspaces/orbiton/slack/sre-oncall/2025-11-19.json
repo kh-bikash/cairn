@@ -2,21 +2,14 @@
  {
   "type": "message",
   "user": "U01020",
-  "text": "Can someone from Platform look at the notifications-service dashboard? p99 creeping up.",
-  "ts": "1763558160.000001"
+  "text": "Paged for checkout-api latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1763548620.000001"
  },
  {
   "type": "message",
-  "user": "U01004",
+  "user": "U01006",
   "text": "Looking now.",
-  "ts": "1763558460.000001",
-  "thread_ts": "1763558160.000001"
- },
- {
-  "type": "message",
-  "user": "U01002",
-  "text": "Thanks!",
-  "ts": "1763559000.000001",
-  "thread_ts": "1763558160.000001"
+  "ts": "1763548920.000001",
+  "thread_ts": "1763548620.000001"
  }
 ]

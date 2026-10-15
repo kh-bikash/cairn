@@ -1,21 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01008",
-  "text": "Rolling back checkout-api v4.28.0: error rate up after deploy.",
-  "ts": "1784112240.000001"
- },
- {
-  "type": "message",
-  "user": "U01001",
-  "text": "Deployed feature-flags v3.17.5 to production.",
-  "ts": "1784114760.000001"
- },
- {
-  "type": "message",
-  "user": "U01003",
-  "text": "👍",
-  "ts": "1784115060.000001",
-  "thread_ts": "1784114760.000001"
+  "user": "U01004",
+  "text": "Rolling back events-pipeline v4.2.5: error rate up after deploy.",
+  "ts": "1784138580.000001"
  }
 ]

@@ -1,8 +1,0 @@
-[
- {
-  "type": "message",
-  "user": "U01012",
-  "text": "Rolling back dispatch-api v4.0.3: error rate up after deploy.",
-  "ts": "1788528840.000001"
- }
-]

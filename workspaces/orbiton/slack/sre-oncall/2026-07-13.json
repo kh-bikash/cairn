@@ -1,0 +1,21 @@
+[
+ {
+  "type": "message",
+  "user": "U01021",
+  "text": "Paged for notifications-service latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1783939920.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Can someone from Platform look at the events-pipeline dashboard? p99 creeping up.",
+  "ts": "1783942680.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Thanks!",
+  "ts": "1783942980.000001",
+  "thread_ts": "1783942680.000001"
+ }
+]

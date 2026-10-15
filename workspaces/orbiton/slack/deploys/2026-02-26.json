@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01004",
+  "text": "events-pipeline v1.25.8 is live in staging, prod tomorrow.",
+  "ts": "1772120280.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Rolling back route-optimizer v1.12.4: error rate up after deploy.",
+  "ts": "1772124960.000001"
+ }
+]

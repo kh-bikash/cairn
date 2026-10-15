@@ -3,20 +3,6 @@
   "type": "message",
   "user": "U01019",
   "text": "Paged for auth-service latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1769414400.000001"
- },
- {
-  "type": "message",
-  "user": "U01003",
-  "text": "👍",
-  "ts": "1769414700.000001",
-  "thread_ts": "1769414400.000001"
- },
- {
-  "type": "message",
-  "user": "U01002",
-  "text": "👍",
-  "ts": "1769415240.000001",
-  "thread_ts": "1769414400.000001"
+  "ts": "1769449200.000001"
  }
 ]

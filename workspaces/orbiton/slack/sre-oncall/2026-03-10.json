@@ -2,13 +2,20 @@
  {
   "type": "message",
   "user": "U01020",
-  "text": "Paged for payments-service latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1773144540.000001"
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on events-pipeline.",
+  "ts": "1773141120.000001"
  },
  {
   "type": "message",
-  "user": "U01008",
-  "text": "Paged for driver-app latency at 03:10, auto-resolved after a pod restart.",
-  "ts": "1773149220.000001"
+  "user": "U01004",
+  "text": "Looking now.",
+  "ts": "1773141420.000001",
+  "thread_ts": "1773141120.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on checkout-api.",
+  "ts": "1773156180.000001"
  }
 ]

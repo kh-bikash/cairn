@@ -1,15 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01014",
-  "text": "Handing over on-call. Quiet week except a noisy disk alert on warehouse-db.",
-  "ts": "1765469640.000001"
+  "user": "U01019",
+  "text": "Paged for route-optimizer latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1765459440.000001"
  },
  {
   "type": "message",
-  "user": "U01015",
+  "user": "U01010",
   "text": "Can you share the dashboard link?",
-  "ts": "1765469940.000001",
-  "thread_ts": "1765469640.000001"
+  "ts": "1765459740.000001",
+  "thread_ts": "1765459440.000001"
  }
 ]

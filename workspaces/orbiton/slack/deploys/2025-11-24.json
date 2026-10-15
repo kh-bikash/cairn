@@ -1,22 +1,14 @@
 [
  {
   "type": "message",
-  "user": "U01002",
-  "text": "Rolling back events-pipeline v3.1.2: error rate up after deploy.",
-  "ts": "1763975100.000001"
+  "user": "U01010",
+  "text": "Deployed dispatch-api v2.5.2 to production.",
+  "ts": "1763980680.000001"
  },
  {
   "type": "message",
-  "user": "U01003",
-  "text": "Can you share the dashboard link?",
-  "ts": "1763975400.000001",
-  "thread_ts": "1763975100.000001"
- },
- {
-  "type": "message",
-  "user": "U01002",
-  "text": "Same here.",
-  "ts": "1763975940.000001",
-  "thread_ts": "1763975100.000001"
+  "user": "U01001",
+  "text": "feature-flags v4.25.1 is live in staging, prod tomorrow.",
+  "ts": "1764009180.000001"
  }
 ]

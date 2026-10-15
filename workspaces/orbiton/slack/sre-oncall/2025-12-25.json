@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Paged for driver-app latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1766660460.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01015",
+  "text": "On it.",
+  "ts": "1766660760.000001",
+  "thread_ts": "1766660460.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01014",
+  "text": "Ack.",
+  "ts": "1766661300.000001",
+  "thread_ts": "1766660460.000001"
+ }
+]

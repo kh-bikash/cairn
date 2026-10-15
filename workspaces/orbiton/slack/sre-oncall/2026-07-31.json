@@ -1,8 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01008",
-  "text": "Can someone from Payments look at the feature-flags dashboard? p99 creeping up.",
-  "ts": "1785521220.000001"
+  "user": "U01020",
+  "text": "Can someone from Data look at the analytics-warehouse dashboard? p99 creeping up.",
+  "ts": "1785523620.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Can you share the dashboard link?",
+  "ts": "1785523920.000001",
+  "thread_ts": "1785523620.000001"
  }
 ]

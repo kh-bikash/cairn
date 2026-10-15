@@ -1,28 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01004",
-  "text": "auth-service v4.28.4 is live in staging, prod tomorrow.",
-  "ts": "1783586820.000001"
- },
- {
-  "type": "message",
-  "user": "U01004",
-  "text": "👍",
-  "ts": "1783587120.000001",
-  "thread_ts": "1783586820.000001"
- },
- {
-  "type": "message",
-  "user": "U01004",
-  "text": "On it.",
-  "ts": "1783587660.000001",
-  "thread_ts": "1783586820.000001"
- },
- {
-  "type": "message",
-  "user": "U01007",
-  "text": "Deployed payments-service v4.20.2 to production.",
-  "ts": "1783602780.000001"
+  "user": "U01005",
+  "text": "payments-service v2.22.3 is live in staging, prod tomorrow.",
+  "ts": "1783585860.000001"
  }
 ]

@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01019",
+  "text": "Handing over on-call. Quiet week except a noisy disk alert on events-pipeline.",
+  "ts": "1781030640.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Thanks!",
+  "ts": "1781030940.000001",
+  "thread_ts": "1781030640.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01001",
+  "text": "Done.",
+  "ts": "1781031480.000001",
+  "thread_ts": "1781030640.000001"
+ }
+]

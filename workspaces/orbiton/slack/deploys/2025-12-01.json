@@ -1,8 +1,22 @@
 [
  {
   "type": "message",
+  "user": "U01005",
+  "text": "Deployed checkout-api v4.7.7 to production.",
+  "ts": "1764606900.000001"
+ },
+ {
+  "type": "message",
   "user": "U01008",
-  "text": "Deployed payments-service v2.12.9 to production.",
-  "ts": "1764593520.000001"
+  "text": "Can you share the dashboard link?",
+  "ts": "1764607200.000001",
+  "thread_ts": "1764606900.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01007",
+  "text": "Ack.",
+  "ts": "1764607740.000001",
+  "thread_ts": "1764606900.000001"
  }
 ]

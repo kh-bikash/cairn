@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01005",
+  "text": "Deployed payments-service v1.8.4 to production.",
+  "ts": "1764158160.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
+  "text": "route-optimizer v2.5.6 is live in staging, prod tomorrow.",
+  "ts": "1764169800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01010",
+  "text": "Can you share the dashboard link?",
+  "ts": "1764170100.000001",
+  "thread_ts": "1764169800.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01009",
+  "text": "Done.",
+  "ts": "1764170640.000001",
+  "thread_ts": "1764169800.000001"
+ }
+]

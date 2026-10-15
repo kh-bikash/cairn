@@ -1,8 +1,21 @@
 [
  {
   "type": "message",
-  "user": "U01007",
+  "user": "U01013",
   "text": "Reminder: all-hands Thursday at 16:00.",
-  "ts": "1781288700.000001"
+  "ts": "1781267100.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Reminder: all-hands Thursday at 16:00.",
+  "ts": "1781275860.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01020",
+  "text": "Can you share the dashboard link?",
+  "ts": "1781276160.000001",
+  "thread_ts": "1781275860.000001"
  }
 ]

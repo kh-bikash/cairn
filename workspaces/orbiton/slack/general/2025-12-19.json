@@ -1,28 +1,8 @@
 [
  {
   "type": "message",
-  "user": "U01004",
-  "text": "Welcome David to the team!",
-  "ts": "1766131860.000001"
- },
- {
-  "type": "message",
-  "user": "U01005",
-  "text": "Reminder: all-hands Thursday at 16:00.",
-  "ts": "1766141820.000001"
- },
- {
-  "type": "message",
-  "user": "U01002",
-  "text": "Ack.",
-  "ts": "1766142120.000001",
-  "thread_ts": "1766141820.000001"
- },
- {
-  "type": "message",
-  "user": "U01001",
-  "text": "Looking now.",
-  "ts": "1766142660.000002",
-  "thread_ts": "1766141820.000001"
+  "user": "U01011",
+  "text": "Office closed Friday for the public holiday.",
+  "ts": "1766155620.000001"
  }
 ]

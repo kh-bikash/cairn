@@ -1,15 +1,28 @@
 [
  {
   "type": "message",
-  "user": "U01022",
-  "text": "Deployed driver-app v1.14.9 to production.",
-  "ts": "1787940240.000001"
+  "user": "U01014",
+  "text": "Deployed driver-app v3.13.5 to production.",
+  "ts": "1787911560.000001"
  },
  {
   "type": "message",
-  "user": "U01015",
+  "user": "U01009",
+  "text": "dispatch-api v1.20.8 is live in staging, prod tomorrow.",
+  "ts": "1787911980.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
   "text": "On it.",
-  "ts": "1787940540.000001",
-  "thread_ts": "1787940240.000001"
+  "ts": "1787912280.000001",
+  "thread_ts": "1787911980.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01011",
+  "text": "Ack.",
+  "ts": "1787912820.000001",
+  "thread_ts": "1787911980.000001"
  }
 ]

@@ -1,15 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01000",
-  "text": "Office closed Friday for the public holiday.",
-  "ts": "1772023440.000001"
+  "user": "U01013",
+  "text": "Reminder: all-hands Thursday at 16:00.",
+  "ts": "1772035380.000001"
  },
  {
   "type": "message",
-  "user": "U01009",
+  "user": "U01017",
   "text": "👍",
-  "ts": "1772023740.000001",
-  "thread_ts": "1772023440.000001"
+  "ts": "1772035680.000001",
+  "thread_ts": "1772035380.000001"
  }
 ]

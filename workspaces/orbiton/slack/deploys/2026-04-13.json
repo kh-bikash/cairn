@@ -1,8 +1,15 @@
 [
  {
   "type": "message",
-  "user": "U01012",
-  "text": "Rolling back checkout-api v2.24.5: error rate up after deploy.",
-  "ts": "1776091440.000001"
+  "user": "U01005",
+  "text": "Rolling back ledger-db v4.25.0: error rate up after deploy.",
+  "ts": "1776097860.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01006",
+  "text": "Ack.",
+  "ts": "1776098160.000001",
+  "thread_ts": "1776097860.000001"
  }
 ]

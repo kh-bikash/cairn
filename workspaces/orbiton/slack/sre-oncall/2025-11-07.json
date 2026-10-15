@@ -1,22 +1,21 @@
 [
  {
   "type": "message",
-  "user": "U01014",
-  "text": "Handing over on-call. Quiet week except a noisy disk alert on auth-service.",
-  "ts": "1762506600.000001"
+  "user": "U01019",
+  "text": "Paged for warehouse-db latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1762513200.000001"
  },
  {
   "type": "message",
-  "user": "U01018",
-  "text": "👍",
-  "ts": "1762506900.000001",
-  "thread_ts": "1762506600.000001"
+  "user": "U01020",
+  "text": "Paged for route-optimizer latency at 03:10, auto-resolved after a pod restart.",
+  "ts": "1762527480.000001"
  },
  {
   "type": "message",
-  "user": "U01005",
+  "user": "U01009",
   "text": "Can you share the dashboard link?",
-  "ts": "1762507440.000001",
-  "thread_ts": "1762506600.000001"
+  "ts": "1762527780.000001",
+  "thread_ts": "1762527480.000001"
  }
 ]
