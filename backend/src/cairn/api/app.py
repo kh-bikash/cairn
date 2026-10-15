@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -108,7 +108,7 @@ class State:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     settings = get_settings()
     state = State(settings)
     if state.default.store.ping():
@@ -334,6 +334,13 @@ def create_app() -> FastAPI:
     @app.get("/api/systems")
     async def systems(request: Request) -> dict[str, Any]:
         return await asyncio.to_thread(catalog.list_systems, st(request).store)
+
+    @app.get("/api/sources/{uid:path}")
+    async def source(uid: str, request: Request) -> dict[str, Any]:
+        found = await asyncio.to_thread(catalog.source_detail, st(request).store, uid)
+        if found is None:
+            raise HTTPException(404, "source not found")
+        return found
 
     @app.get("/api/systems/{key:path}")
     async def system(key: str, request: Request) -> dict[str, Any]:

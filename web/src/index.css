@@ -1,16 +1,92 @@
 @import 'tailwindcss';
 
-@theme {
-  --color-ink-950: #070b16;
-  --color-ink-900: #0b1020;
-  --color-ink-800: #121a30;
-  --color-ink-700: #1b2541;
-  --color-ink-600: #263252;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+/* Design tokens. Light is the default; dark follows the OS or the header toggle. */
+:root {
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --surface-2: #f5f5f4;
+  --line: #e7e5e4;
+  --line-strong: #d6d3d1;
+  --fg: #1c1917;
+  --muted: #78716c;
+  --faint: #a8a29e;
+  --accent: #0f766e;
+  --accent-fg: #ffffff;
+  --accent-soft: #e6f4f1;
+  --danger: #b91c1c;
+  --danger-soft: #fdecec;
+  --warn: #b45309;
+  --warn-soft: #fdf3e2;
+  --ok: #15803d;
+  --ok-soft: #e8f5ec;
+  --graph-person: #c2410c;
+  --graph-system: #0f766e;
+  --graph-module: #5eaaa2;
+  --graph-source: #6366f1;
+  --graph-issue: #db2777;
+  --graph-decision: #15803d;
+  --graph-drift: #dc2626;
+  --graph-premise: #65a30d;
+  --graph-team: #7c3aed;
+  --graph-edge: #d6d3d1;
+  --graph-label-bg: rgba(255, 255, 255, 0.85);
+  --graph-label: #44403c;
+  color-scheme: light;
 }
 
-:root {
+:root[data-theme='dark'] {
+  --bg: #0c0a09;
+  --surface: #161412;
+  --surface-2: #1d1a18;
+  --line: #292524;
+  --line-strong: #3a3532;
+  --fg: #f5f5f4;
+  --muted: #a8a29e;
+  --faint: #78716c;
+  --accent: #2dd4bf;
+  --accent-fg: #042f2e;
+  --accent-soft: rgba(45, 212, 191, 0.12);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --warn: #fbbf24;
+  --warn-soft: rgba(251, 191, 36, 0.12);
+  --ok: #4ade80;
+  --ok-soft: rgba(74, 222, 128, 0.12);
+  --graph-person: #fb923c;
+  --graph-system: #2dd4bf;
+  --graph-module: #5eead4;
+  --graph-source: #818cf8;
+  --graph-issue: #f472b6;
+  --graph-decision: #4ade80;
+  --graph-drift: #f87171;
+  --graph-premise: #a3e635;
+  --graph-team: #a78bfa;
+  --graph-edge: #3a3532;
+  --graph-label-bg: rgba(12, 10, 9, 0.8);
+  --graph-label: #e7e5e4;
   color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
 
 html,
@@ -21,47 +97,124 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-ink-950);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
 }
 
-/* Answer markdown */
-.answer p {
-  margin: 0.35rem 0;
+::selection {
+  background: var(--accent-soft);
 }
-.answer ul,
-.answer ol {
-  margin: 0.35rem 0;
-  padding-left: 1.1rem;
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-.answer ul {
+
+/* Rendered markdown (answers, previews, source bodies). */
+.prose-cairn {
+  line-height: 1.65;
+}
+.prose-cairn p {
+  margin: 0.5rem 0;
+}
+.prose-cairn ul,
+.prose-cairn ol {
+  margin: 0.5rem 0;
+  padding-left: 1.15rem;
+}
+.prose-cairn ul {
   list-style: disc;
 }
-.answer ol {
+.prose-cairn ol {
   list-style: decimal;
 }
-.answer li {
-  margin: 0.2rem 0;
+.prose-cairn li {
+  margin: 0.25rem 0;
 }
-.answer li::marker {
-  color: var(--color-slate-500);
+.prose-cairn li::marker {
+  color: var(--faint);
 }
-.answer strong {
-  color: var(--color-slate-50);
+.prose-cairn strong {
   font-weight: 600;
 }
-.answer code {
-  border-radius: 0.25rem;
-  background: var(--color-ink-700);
+.prose-cairn h1,
+.prose-cairn h2,
+.prose-cairn h3 {
+  font-weight: 600;
+  margin: 1rem 0 0.4rem;
+  line-height: 1.3;
+}
+.prose-cairn h1 {
+  font-size: 1.15rem;
+}
+.prose-cairn h2 {
+  font-size: 1.05rem;
+}
+.prose-cairn h3 {
+  font-size: 0.95rem;
+}
+.prose-cairn code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 0.3rem;
   padding: 0.05rem 0.3rem;
-  font-size: 0.8em;
+}
+.prose-cairn pre {
+  overflow-x: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+.prose-cairn pre code {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.prose-cairn blockquote {
+  border-left: 2px solid var(--line-strong);
+  padding-left: 0.75rem;
+  color: var(--muted);
+  margin: 0.5rem 0;
+}
+.prose-cairn a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+.prose-cairn table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.prose-cairn th,
+.prose-cairn td {
+  border: 1px solid var(--line);
+  padding: 0.3rem 0.5rem;
 }
 
-::-webkit-scrollbar {
+.scroll-thin::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-::-webkit-scrollbar-thumb {
-  background: var(--color-ink-600);
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
   border-radius: 8px;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fade-up 0.25s ease-out both;
 }

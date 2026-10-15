@@ -19,10 +19,10 @@ export class ErrorBoundary extends Component<{ name: string; children: ReactNode
   render() {
     if (!this.state.error) return this.props.children
     return (
-      <div className="m-3 rounded-lg border border-red-400/30 bg-red-500/5 p-3 text-xs text-red-200">
-        <p className="font-medium">The {this.props.name} panel hit an error.</p>
-        <p className="mt-1 text-red-300/80">{this.state.error.message}</p>
-        <button onClick={() => this.setState({ error: null })} className="mt-2 rounded bg-red-400/15 px-2 py-1 hover:bg-red-400/25">
+      <div className="m-6 rounded-xl bg-danger-soft p-4 text-sm text-danger">
+        <p className="font-medium">Something went wrong on this page.</p>
+        <p className="mt-1 text-muted">{this.state.error.message}</p>
+        <button onClick={() => this.setState({ error: null })} className="mt-3 rounded-lg border border-line bg-surface px-3 py-1.5 text-fg hover:bg-surface-2">
           Try again
         </button>
       </div>

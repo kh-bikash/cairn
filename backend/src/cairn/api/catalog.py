@@ -204,6 +204,62 @@ def system_detail(store: GraphStore, key: str) -> dict[str, Any]:
     }
 
 
+# --------------------------------------------------------------------------- sources
+
+
+def source_detail(store: GraphStore, uid: str) -> dict[str, Any] | None:
+    """One source with its conversation, so imported Slack threads, tickets and docs open inside the app."""
+    rows = store.records(
+        "MATCH (s:Source {uid: $u}) RETURN s.uid AS uid, s.kind AS kind, s.title AS title, s.body AS body, s.url AS url, "
+        "s.ts AS ts, s.state AS state, s.author AS author, s.labels AS labels, s.repo AS repo",
+        {"u": uid},
+    )
+    if not rows:
+        return None
+    src = rows[0]
+    parent = store.records("MATCH (:Source {uid: $u})-[:REPLY_TO]->(p:Source) RETURN p.uid AS uid, p.title AS title, p.kind AS kind", {"u": uid})
+    replies = store.records(
+        "MATCH (c:Source)-[:REPLY_TO]->(:Source {uid: $u}) RETURN c.uid AS uid, c.kind AS kind, c.author AS author, c.body AS body, c.ts AS ts, c.url AS url ORDER BY ts",
+        {"u": uid},
+    )
+    decisions = store.records(
+        """
+        MATCH (d:Decision)-[r:DECIDED_IN|DISCUSSED_IN]->(:Source {uid: $u})
+        RETURN d.uid AS uid, d.title AS title, d.ts AS ts, coalesce(d.drift, false) AS drift, type(r) AS how ORDER BY ts DESC
+        """,
+        {"u": uid},
+    )
+    challenges = store.records(
+        "MATCH (:Source {uid: $u})-[c:CHALLENGES]->(p:Premise)<-[:BECAUSE]-(d:Decision) RETURN d.uid AS uid, d.title AS title, p.text AS premise, c.quote AS quote",
+        {"u": uid},
+    )
+    systems = [r["key"] for r in store.records("MATCH (:Source {uid: $u})-[:TOUCHES|MENTIONS|IN_REPO]->(s:System) RETURN DISTINCT s.key AS key", {"u": uid})]
+    people = store.records(
+        "MATCH (p:Person)-[r:AUTHORED|REVIEWED|ASSIGNED|MERGED]->(:Source {uid: $u}) RETURN DISTINCT p.handle AS handle, type(r) AS role", {"u": uid}
+    )
+    external = src["url"] if src["url"] and not str(src["url"]).startswith("#") else None
+    return {
+        **{k: src[k] for k in ("uid", "kind", "title", "body", "state", "author", "labels", "repo")},
+        "date": fmt_date(src["ts"]),
+        "external_url": external,
+        "parent": parent[0] if parent else None,
+        "replies": [{**r, "date": fmt_date(r["ts"]), "external_url": r["url"] if r["url"] and not str(r["url"]).startswith("#") else None} for r in replies],
+        "decisions": [
+            {
+                "uid": d["uid"],
+                "title": d["title"],
+                "date": fmt_date(d["ts"]),
+                "drift": d["drift"],
+                "role": "decided here" if d["how"] == "DECIDED_IN" else "discussed here",
+            }
+            for d in decisions
+        ],
+        "challenges": challenges,
+        "systems": systems,
+        "people": people,
+    }
+
+
 # --------------------------------------------------------------------------- suggestions & overview
 
 
@@ -232,7 +288,8 @@ def suggestions(store: GraphStore, limit: int = 4) -> list[str]:
 
 def workspace(store: GraphStore) -> dict[str, Any]:
     counts = store.counts()["nodes"]
-    span = store.records("MATCH (s:Source) WHERE s.kind IN ['pr', 'issue'] RETURN min(s.ts) AS first, max(s.ts) AS last")
+    # Docs carry their fetch date, not authoring date, so the span comes from conversations and decisions.
+    span = store.records("MATCH (s:Source) WHERE NOT s.kind IN ['doc'] AND s.ts IS NOT NULL RETURN min(s.ts) AS first, max(s.ts) AS last")
     drift = store.ro_query("MATCH (d:Decision {drift: true}) RETURN count(d)")[0][0]
     pending = store.ro_query("MATCH (a:Action {status: 'pending'}) RETURN count(a)")[0][0]
     return {
