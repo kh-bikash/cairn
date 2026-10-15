@@ -15,7 +15,7 @@ browser ──► Vercel (web) ──/api/*──► Caddy :443 ──► api :8
 | `deploy/aws/deploy.sh` | on the VM, via SSM | pulls a release from S3, health-gated rollout |
 | `deploy/docker-compose.prod.yml` | on the VM | pinned images, memory limits, log rotation, data in `/opt/cairn-data` |
 | `deploy/Caddyfile` | on the VM | HTTPS, security headers, unbuffered SSE |
-| `web/vercel.json` | Vercel | rewrites `/api/*` to the VM |
+| `web/vercel.json` | Vercel | rewrites `/api/*` to the VM; the Vercel project's root directory is `web`, and every push to `main` deploys it |
 
 The VM has no SSH and no open database port: the security group allows only 80/443, and administration goes
 through AWS Systems Manager. Its IAM role can read only `release/*` in the deploy bucket.
