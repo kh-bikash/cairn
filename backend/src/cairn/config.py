@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     llm_max_concurrency: int = 4
 
     # --- Agent / API ---------------------------------------------------------------
-    agent_max_steps: int = 8
+    agent_max_steps: int = 5  # evidence is prefetched; more rounds mostly add latency and rate-limit pressure
     decide_confidence_threshold: float = 0.7
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:5173"])
 
