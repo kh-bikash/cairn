@@ -167,4 +167,34 @@ async def test_daily_quota_trips_circuit_breaker(tmp_path: Path) -> None:
     assert llm.exhausted == {"groq:capped", "groq:spare"}
     with pytest.raises(LLMQuotaExhausted):
         await llm.chat("decide", [{"role": "user", "content": "again"}])
-    assert len(calls) == 2, "exhausted models are not called again this session"
+    assert len(calls) == 2, "benched models are not called again until their quota resets"
+
+
+async def test_benched_model_comes_back_after_its_reset(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx2
+    import openai
+
+    from cairn.llm import client as llm_client
+
+    llm = LLM(_settings(tmp_path, llm_cache=False, model_decide="groq:capped"))
+    state = {"capped": True}
+
+    def respond(request: dict[str, Any]) -> SimpleNamespace:
+        if state["capped"]:
+            response = httpx2.Response(429, request=httpx2.Request("POST", "https://example.invalid"))
+            raise openai.RateLimitError(
+                "Rate limit reached for model on tokens per day (TPD): Limit 200000. Please try again in 7m12.5s.", response=response, body=None
+            )
+        return _completion("ok")
+
+    _wire(llm, respond)
+    with pytest.raises(llm_client.LLMQuotaExhausted):
+        await llm.chat("decide", [{"role": "user", "content": "q"}])
+    assert llm.exhausted == {"groq:capped"}
+    assert 430 < llm._benched["groq:capped"] - llm_client.time.monotonic() <= 438, "bench length follows Groq's reset time"
+
+    clock = llm_client.time.monotonic() + 600
+    monkeypatch.setattr(llm_client.time, "monotonic", lambda: clock)
+    state["capped"] = False
+    assert llm.exhausted == set()
+    assert (await llm.chat("decide", [{"role": "user", "content": "q2"}])).content == "ok"

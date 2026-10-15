@@ -15,7 +15,8 @@ from typing import Any
 
 import pytest
 
-from cairn.agent.loop import Agent
+from cairn.agent.loop import Agent, Ledger
+from cairn.agent.router import RENDERERS
 from cairn.agent.tools import Tools, dispatch
 from cairn.config import Settings
 from cairn.derive.expertise import derive_collaboration, derive_expertise
@@ -165,6 +166,9 @@ def test_graph_shape(store: GraphStore) -> None:
 def test_tools_return_real_data(store: GraphStore, name: str, args: dict[str, Any], check: Any) -> None:
     result = dispatch(Tools(store), name, args)
     assert check(result.data), result.data
+    if name in RENDERERS:
+        # Graph-only mode renders tool output directly; a renamed field must fail here, not in front of a visitor.
+        assert RENDERERS[name](result, Ledger()).strip(), f"{name} renders nothing"
     sg = result.subgraph.to_dict()
     if name not in {"bus_factor"}:
         assert sg["nodes"], f"{name} returned no subgraph for the UI"

@@ -13,7 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from cairn.agent.tools import ToolResult, Tools
+from cairn.agent.tools import ToolResult, Tools, _named_terms, _stem
 
 if TYPE_CHECKING:
     from cairn.agent.loop import Ledger
@@ -52,27 +52,30 @@ class _Catalog:
     loaded_at: float
 
 
-_CATALOG: dict[int, _Catalog] = {}
+_CATALOG: dict[str, _Catalog] = {}  # by graph name: one catalog per workspace
 _CATALOG_TTL = 300.0
 
 
 def _catalog(tools: Tools) -> _Catalog:
-    cached = _CATALOG.get(id(tools.store))
+    cached = _CATALOG.get(tools.store.name)
     if cached and time.monotonic() - cached.loaded_at < _CATALOG_TTL:
         return cached
     systems: list[tuple[str, str]] = []
     activity: dict[str, int] = {}
     rows = tools.store.records(
         "MATCH (s:System) WHERE s.kind IN ['repo', 'code'] OPTIONAL MATCH (x:Source)-[:TOUCHES|IN_REPO]->(s) "
-        "RETURN s.key AS key, s.name AS name, s.path AS path, count(x) AS act"
+        # coalesce: FalkorDB crashes when an aggregate query returns a property name the graph has never stored.
+        "RETURN s.key AS key, s.name AS name, s.path AS path, coalesce(s.aliases, []) AS aliases, count(x) AS act"
     )
     for r in rows:
         activity[r["key"]] = r["act"]
     for r in rows:
-        texts = {r["key"], r["name"], r["path"]}
+        texts = {r["key"], r["name"], r["path"], *(r["aliases"] or [])}
         # "ingestion" should find "graphrag_sdk/ingestion": index a module's last segment too.
         if r["path"] and "/" in r["path"]:
             texts.add(r["path"].rsplit("/", 1)[1])
+        # People say "payments service" for payments-service and "graph rag" for graph_rag.
+        texts |= {re.sub(r"[-_]+", " ", t) for t in texts if t and "/" not in t and ":" not in t}
         for text in texts:
             if text and len(text) >= 3:
                 systems.append((text.lower(), r["key"]))
@@ -80,7 +83,7 @@ def _catalog(tools: Tools) -> _Catalog:
     systems.sort(key=lambda t: (-len(t[0]), -activity.get(t[1], 0)))
     handles = {r["h"].lower(): r["h"] for r in tools.store.records("MATCH (p:Person) RETURN p.handle AS h")}
     cat = _Catalog(systems, handles, time.monotonic())
-    _CATALOG[id(tools.store)] = cat
+    _CATALOG[tools.store.name] = cat
     return cat
 
 
@@ -137,7 +140,10 @@ class Plan:
 
     def render(self, results: list[tuple[str, ToolResult]], ledger: Ledger) -> str:
         parts = [RENDERERS.get(name, _render_generic)(r, ledger) for name, r in results]
-        return "\n\n".join(p for p in parts if p).strip() or self.note or "The graph returned no results for that question."
+        body = "\n\n".join(p for p in parts if p).strip()
+        if self.note and body:
+            return f"{self.note}\n\n{body}"
+        return body or self.note or "The graph returned no results for that question."
 
 
 # Words that frame a question rather than name its topic.
@@ -205,6 +211,9 @@ _GENERIC = frozenset(
         "responsible",
         "ask",
         "talk",
+        "about",
+        "speak",
+        "contact",
         "team",
         "code",
         "module",
@@ -270,6 +279,18 @@ def unmatched_topic(tools: Tools, question: str, systems: list[str], people: lis
     return words
 
 
+def _uncovered_words(question: str, systems: list[str], people: list[str]) -> list[str]:
+    """Topic words a who-question asks about that the matched system and people don't explain.
+
+    Only triggers on a named thing ("Kubernetes"): ordinary words ("client", "tests") describe the system itself.
+    """
+    covered = {w for key in systems for w in re.split(r"[/:#\s_.-]+", key.lower()) if w} | {p.lower() for p in people}
+    words = [w for w in re.findall(r"[a-z][a-z0-9-]{2,}", question.lower()) if w not in _GENERIC and w not in covered]
+    words = [w for w in words if not any(w in c or c in w for c in covered if len(c) >= 4)]
+    named = _named_terms(question)
+    return words if any(_stem(w) in named for w in words) else []
+
+
 def route(tools: Tools, question: str, action_repos: list[str] | None = None) -> Plan:
     intent = intent_of(question)
     if intent == "act_wiki":
@@ -291,10 +312,22 @@ def route(tools: Tools, question: str, action_repos: list[str] | None = None) ->
     if intent in {"who", "impact", "timeline", "search"} and (missing := unmatched_topic(tools, question, systems, people)):
         plan.note = f"I couldn't find anything about “{' '.join(missing)}” in the graph, so I can't answer that reliably."
         return plan
+    if intent == "who" and systems and (extra := _uncovered_words(question, systems, people)):
+        # "Who owns the FalkorDB Kubernetes operator?": the repo matched, the thing asked about isn't a tracked system.
+        # Naming the repo's experts would answer a different question; show where it's mentioned instead.
+        plan.note = f"I couldn't find a system called “{' '.join(extra)}”; these threads mention it:"
+        plan.calls.append(("search", {"query": " ".join(extra)}))
+        return plan
     if intent == "drift":
         plan.calls.append(("drift_report", {}))
     elif intent == "risk":
-        plan.calls.append(("handoff_plan", {"handle": people[0]}) if people else ("bus_factor", {}))
+        if people:
+            plan.calls.append(("handoff_plan", {"handle": people[0]}))
+        elif systems:
+            # "Is knowledge of the retrieval code concentrated?": each person's share of that system answers it.
+            plan.calls.append(("who_knows", {"system": systems[0]}))
+        else:
+            plan.calls.append(("bus_factor", {}))
     elif intent == "teams":
         plan.calls.append(("teams", {}))
     elif intent == "connect" and len(systems) + len(people) >= 2:
@@ -353,12 +386,15 @@ def _render_who(r: ToolResult, ledger: Ledger) -> str:
     if not experts:
         return f"No recorded activity on {r.data.get('system', {}).get('key', 'that system')}."
     lines = [f"Best people to ask about **{r.data['system']['key']}**:"]
+    if r.data.get("owning_team"):
+        lines[0] += f" (owned by {', '.join(r.data['owning_team'])})"
     for e in experts:
-        prs = "".join(_cite(ledger, p["uid"]) for p in e.get("recent_prs", [])[:2])
-        lines.append(
-            f"- @{e['handle']}: {int(e['share'] * 100)}% of recent activity; authored {e['authored_prs']} / reviewed {e['reviewed_prs']} PRs, "
-            f"last active {e['last_active']}{prs}"
-        )
+        who = f"@{e['handle']}" + (f" ({', '.join(x for x in (e.get('role'), e.get('team')) if x)})" if e.get("role") or e.get("team") else "")
+        did = ", ".join(f"{k} {n}" for k, n in (e.get("activity") or {}).items())
+        work = "".join(_cite(ledger, w["uid"]) for w in e.get("recent_work", [])[:2])
+        lines.append(f"- {who}: {int(e['share'] * 100)}% of recent activity" + (f"; {did}" if did else "") + f", last active {e['last_active']}{work}")
+    for d in r.data.get("departed_experts", []):
+        lines.append(f"- ⚠ @{d['handle']} held {int(d['share'] * 100)}% of this knowledge but left on {d['left_company']}.")
     return "\n".join(lines)
 
 
@@ -380,10 +416,24 @@ def _render_impact(r: ToolResult, ledger: Ledger) -> str:
 
 def _render_bus(r: ToolResult, ledger: Ledger) -> str:
     mods = r.data.get("at_risk_modules") or []
-    if not mods:
-        return "No module has knowledge concentrated in a single person."
-    lines = ["Modules where knowledge is concentrated:"]
-    lines += [f"- {m['system']}: @{m['top_expert']} holds {int(m['top_share'] * 100)}% (bus factor {m['bus_factor']}, {m['prs']} PRs)" for m in mods[:8]]
+    departed = r.data.get("departed_experts") or []
+    if not mods and not departed:
+        return "No system has knowledge concentrated in a single person."
+    lines = []
+    if mods:
+        lines.append("Systems where knowledge is concentrated:")
+        for m in mods[:8]:
+            line = f"- {m['system']}: @{m['top_expert']} holds {int(m['top_share'] * 100)}% (bus factor {m['bus_factor']})"
+            if m.get("top_expert_left"):
+                line += f" ⚠ left on {m['top_expert_left']}"
+            if m.get("next_best"):
+                line += f"; next best @{m['next_best']}"
+            lines.append(line)
+    for d in departed[:5]:
+        held = ", ".join(f"{s['system']} ({int(s['all_time_share'] * 100)}%)" for s in d["systems"][:4])
+        lines.append(f"- ⚠ @{d['handle']} left on {d['left_company']} and held: {held}")
+    if r.data.get("no_clear_owner"):
+        lines += ["", "No clear owner: " + ", ".join(d["system"] for d in r.data["no_clear_owner"][:6])]
     if r.data.get("bridge_people"):
         lines += ["", "Bridge people (betweenness): " + ", ".join(f"@{b['handle']}" for b in r.data["bridge_people"])]
     return "\n".join(lines)

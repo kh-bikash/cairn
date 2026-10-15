@@ -290,7 +290,7 @@ WRITES: list[tuple[str, str]] = [
         "repos",
         "UNWIND $rows AS r MERGE (s:System {key: r.key}) "
         "SET s.name = r.name, s.kind = 'repo', s.repo = r.key, s.path = '', s.description = r.description, "
-        "s.url = r.url, s.language = r.language, s.stars = r.stars",
+        "s.url = r.url, s.language = r.language, s.stars = r.stars, s.aliases = coalesce(r.aliases, [])",
     ),
     (
         "modules",

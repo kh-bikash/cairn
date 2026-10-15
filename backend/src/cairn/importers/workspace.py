@@ -183,6 +183,7 @@ def _read_systems(ws: Workspace) -> None:
                 "url": "",
                 "language": r.get("kind") or None,
                 "stars": 0,
+                "aliases": _split(r.get("aliases")),
             }
         )
         if r.get("team"):

@@ -44,9 +44,22 @@ _MAX_WAIT_S = 65.0
 _RETRY_DELAY = re.compile(r"retry(?:Delay|[ _-]after)['\"]?\s*[:=]\s*['\"]?(\d+(?:\.\d+)?)s?", re.I)
 
 
+_QUOTA_COOLDOWN_S = 15 * 60.0  # when a provider doesn't say when the quota resets, look again after this long
+_TRY_AGAIN = re.compile(r"try again in (?:(\d+)h)?(?:(\d+)m)?(?:(\d+(?:\.\d+)?)s)?", re.I)
+
+
 def _is_daily_quota(exc: openai.RateLimitError) -> bool:
     text = str(exc)
     return "PerDay" in text or "per day" in text.lower() or "RequestsPerDay" in text
+
+
+def _quota_reset_s(exc: openai.RateLimitError) -> float:
+    """Seconds until a daily quota frees up. Groq's limits roll and say "try again in 7m12.5s"; Gemini's don't say."""
+    m = _TRY_AGAIN.search(str(exc))
+    if m and any(m.groups()):
+        h, mins, secs = (float(g) if g else 0.0 for g in m.groups())
+        return h * 3600 + mins * 60 + secs + 5.0
+    return _retry_delay(exc) or _QUOTA_COOLDOWN_S
 
 
 def _retry_delay(exc: openai.RateLimitError) -> float | None:
@@ -126,7 +139,9 @@ class LLM:
         self.usage = UsageBook()
         self._clients: dict[str, AsyncOpenAI] = {}
         self._limits: dict[str, asyncio.Semaphore] = {}
-        self.exhausted: set[str] = set()  # "provider:model" refs past their daily quota (circuit breaker)
+        # Circuit breaker: "provider:model" -> monotonic time when its daily quota is expected back. A long-running
+        # server must recover on its own once the quota resets, so models are benched, never banned.
+        self._benched: dict[str, float] = {}
         self._cache_dir: Path | None = settings.cache_dir if settings.llm_cache else None
         if self._cache_dir:
             self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -139,6 +154,12 @@ class LLM:
 
     def model_for(self, role: Role) -> tuple[str, str]:
         return self.model_chain(role)[0]
+
+    @property
+    def exhausted(self) -> set[str]:
+        """Models currently benched for quota."""
+        now = time.monotonic()
+        return {ref for ref, until in self._benched.items() if until > now}
 
     def available(self, role: Role) -> bool:
         return any(self.settings.api_key_for(p) for p, _ in self.model_chain(role))
@@ -191,9 +212,10 @@ class LLM:
         live = [(p, m, r) for p, m, r in requests if self.settings.api_key_for(p)]
         if not live:
             raise LLMNotConfigured(f"no API key for any model configured for role {role!r}")
-        available = [(p, m, r) for p, m, r in live if f"{p}:{m}" not in self.exhausted]
+        benched = self.exhausted
+        available = [(p, m, r) for p, m, r in live if f"{p}:{m}" not in benched]
         if not available:
-            raise LLMQuotaExhausted(f"every model for role {role!r} has used its daily quota: {', '.join(sorted(self.exhausted))}")
+            raise LLMQuotaExhausted(f"every model for role {role!r} has used its daily quota: {', '.join(sorted(benched))}")
         last_error: Exception | None = None
         for index, (provider, model, request) in enumerate(available):
             is_last = index == len(available) - 1
@@ -205,8 +227,9 @@ class LLM:
                 except openai.RateLimitError as exc:
                     last_error = exc
                     if _is_daily_quota(exc):
-                        self.exhausted.add(f"{provider}:{model}")
-                        log.warning("%s:%s used its daily quota; skipping it for this session", provider, model)
+                        wait = _quota_reset_s(exc)
+                        self._benched[f"{provider}:{model}"] = time.monotonic() + wait
+                        log.warning("%s:%s used its daily quota; skipping it for %.0f min", provider, model, wait / 60)
                         break
                     delay = _retry_delay(exc)
                     if delay is None or delay > _MAX_WAIT_S or attempt == _MAX_ATTEMPTS - 1:

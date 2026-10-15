@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -121,12 +122,56 @@ _TOPIC_STOP = frozenset(
         "they",
         "you",
         "your",
+        # Verbs that frame a decision rather than name its subject.
+        "choose",
+        "chose",
+        "chosen",
+        "pick",
+        "picked",
+        "decide",
+        "decided",
+        "go",
+        "went",
+        "opt",
+        "opted",
+        "prefer",
+        "preferred",
+        "select",
+        "selected",
+        "adopt",
+        "adopted",
+        "switch",
+        "switched",
+        "move",
+        "moved",
+        "keep",
+        "kept",
+        "start",
+        "started",
+        "stop",
+        "stopped",
     ]
 )
 
 
 def _words(text: str) -> list[str]:
     return _WORD.findall(text.lower().replace("-", " "))
+
+
+_NAMED = re.compile(r"[A-Za-z][A-Za-z0-9_.-]*[A-Za-z0-9]")
+
+
+def _named_terms(text: str) -> set[str]:
+    """Stems of words that name a thing (Neo4j, MongoDB, gRPC, Kubernetes) rather than describe one.
+
+    A named word has a digit, an inner capital, or a capital that doesn't start the sentence.
+    """
+    out: set[str] = set()
+    for i, m in enumerate(_NAMED.finditer(text)):
+        w = m.group(0)
+        if any(c.isdigit() for c in w) or any(c.isupper() for c in w[1:]) or (i > 0 and w[0].isupper()):
+            out |= {_stem(x) for x in _words(w)}
+    return out
 
 
 def _stem(word: str) -> str:
@@ -322,14 +367,39 @@ class Tools:
             {"uids": uids},
         )
         need = max(1, min(3, -(-len(terms) // 2)))  # ceil(half), capped so long questions aren't impossible
+        # Named things in the question must be covered. "Why did we switch to Neo4j's storage engine?" shares
+        # "storage" and "engine" with plenty of decisions; if no decision mentions Neo4j, the premise is unsupported.
+        named = _named_terms(topic) & terms
+        if named:
+            df = self._decision_term_frequency()
+            if not any(df.get(t, 0) for t in named):
+                return []
         scored = []
         for r in rows:
             text = " ".join(str(x) for x in [r["title"], r["summary"], r["statement"], *r["premises"], *r["options"], *r["threads"]] if x)
             have = {_stem(w) for w in _words(text)}
             overlap = len(terms & have)
-            if overlap >= need:
+            if overlap >= need and (not named or named & have):
                 scored.append((overlap, -uids.index(r["uid"]), r["uid"]))
         return [uid for _, _, uid in sorted(scored, reverse=True)]
+
+    def _decision_term_frequency(self) -> dict[str, int]:
+        """How many decisions mention each stemmed word (title, statement, reasons, alternatives, sources)."""
+        rows = self.store.records(
+            """
+            MATCH (d:Decision)
+            OPTIONAL MATCH (d)-[:BECAUSE|REJECTED]->(p:Premise)
+            OPTIONAL MATCH (d)-[:DECIDED_IN|DISCUSSED_IN]->(t:Source)
+            RETURN d.title AS title, d.summary AS summary, d.statement AS statement,
+                   collect(p.text) AS premises, collect(p.option) AS options, collect(t.title) AS threads
+            """
+        )
+        df: dict[str, int] = defaultdict(int)
+        for r in rows:
+            text = " ".join(str(x) for x in [r["title"], r["summary"], r["statement"], *r["premises"], *r["options"], *r["threads"]] if x)
+            for stem in {_stem(w) for w in _words(text)}:
+                df[stem] += 1
+        return df
 
     def _decision_detail(self, uid: str, sg: SubGraph, evidence: list[Evidence]) -> dict[str, Any]:
         rows = self.store.records(
