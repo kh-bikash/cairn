@@ -340,9 +340,11 @@ class Tools:
             OPTIONAL MATCH (d)-[:AFFECTS]->(s:System)
             WITH d, t, deciders, collect(DISTINCT s.key) AS systems
             OPTIONAL MATCH (newer:Decision)-[:SUPERSEDES]->(d)
+            WITH d, t, deciders, systems, collect(DISTINCT newer {.uid, .title}) AS superseded_by
+            OPTIONAL MATCH (d)-[:DISCUSSED_IN]->(o:Source)
             RETURN d {.uid, .title, .summary, .category, .ts, .status, .confidence, .statement, .drift} AS d,
-                   t {.uid, .title, .url, .kind, .ts} AS thread, deciders, systems,
-                   collect(DISTINCT newer {.uid, .title}) AS superseded_by
+                   t {.uid, .title, .url, .kind, .ts} AS thread, deciders, systems, superseded_by,
+                   collect(DISTINCT o {.uid, .title, .url, .kind, .ts}) AS discussed_in
             """,
             {"uid": uid},
         )
@@ -356,6 +358,10 @@ class Tools:
         evidence.append(Evidence(thread["uid"], thread["title"], thread["url"], thread["kind"], thread["ts"], d.get("statement") or None))
         for h in r["deciders"]:
             sg.edge(sg.node("Person", h, name=h), "DECIDED", did)
+        for o in r["discussed_in"]:
+            if o and o.get("uid"):
+                sg.edge(did, "DISCUSSED_IN", sg.node("Source", o["uid"], kind=o["kind"], title=o["title"], ts=o["ts"], url=o["url"]))
+                evidence.append(Evidence(o["uid"], o["title"], o["url"], o["kind"], o["ts"]))
         for key in r["systems"]:
             sg.edge(did, "AFFECTS", sg.node("System", key, name=key))
 
@@ -411,6 +417,9 @@ class Tools:
             "rejected_alternatives": rejected,
             "drift_detected": bool(d.get("drift")),
             "superseded_by": [s for s in r["superseded_by"] if s and s.get("uid")],
+            "also_discussed_in": [
+                {"uid": o["uid"], "kind": o["kind"], "title": o["title"], "date": fmt_date(o["ts"])} for o in r["discussed_in"] if o and o.get("uid")
+            ],
             "grounding": d["confidence"],
         }
 

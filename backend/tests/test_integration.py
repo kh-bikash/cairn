@@ -20,7 +20,7 @@ from cairn.agent.tools import Tools, dispatch
 from cairn.config import Settings
 from cairn.derive.expertise import derive_collaboration, derive_expertise
 from cairn.extract.drift import DriftReport, check_premise
-from cairn.extract.models import ExtractedDecision, ExtractionResult, QuotedClaim, QuoteOnly, RejectedOption
+from cairn.extract.models import ChallengeCheck, ExtractedDecision, ExtractionResult, QuotedClaim, RejectedOption
 from cairn.extract.pipeline import Report, ground, load_thread, write_decisions
 from cairn.graph.client import GraphStore
 from cairn.ingest.loader import build_rows, write_rows
@@ -95,8 +95,21 @@ class _FakeDecider:
 
 
 class _FakeLLM:
-    async def structured(self, role: str, messages: list[dict[str, Any]], schema: type, **_: Any) -> QuoteOnly:
-        return QuoteOnly(quote="the cache no longer needs persistence across deploys", explanation="Sessions became stateless.")
+    def __init__(self, agrees: bool = True) -> None:
+        self.agrees = agrees
+
+    async def structured(self, role: str, messages: list[dict[str, Any]], schema: type, **_: Any) -> ChallengeCheck:
+        return ChallengeCheck(challenges=self.agrees, quote="the cache no longer needs persistence across deploys", explanation="Sessions became stateless.")
+
+
+async def test_drift_needs_the_second_model_to_agree(store: GraphStore) -> None:
+    premise = store.records(
+        "MATCH (d:Decision)-[:BECAUSE]->(p:Premise) RETURN p.uid AS uid, p.text AS text, d.uid AS decision, d.title AS title, d.ts AS ts, d.repo AS repo"
+    )[0]
+    report = DriftReport()
+    await check_premise(store, _FakeLLM(agrees=False), _FakeDecider(), premise, report)  # type: ignore[arg-type]
+    assert report.challenges == 0 and report.rejected == 1
+    assert store.ro_query("MATCH ()-[c:CHALLENGES]->() RETURN count(c)")[0][0] == 0
 
 
 async def test_drift_detects_contradicting_later_pr(store: GraphStore) -> None:

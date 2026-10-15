@@ -214,6 +214,13 @@ class LLM:
                         break
                     await asyncio.sleep(delay)
                     continue
+                except openai.BadRequestError as exc:
+                    # Groq validates JSON mode server-side and rejects malformed output; another model may do better.
+                    if "json_validate_failed" not in str(exc) and "failed_generation" not in str(exc):
+                        raise
+                    last_error = exc
+                    log.info("%s:%s produced invalid JSON; trying next model", provider, model)
+                    break
                 except (openai.InternalServerError, openai.APIConnectionError, openai.APITimeoutError) as exc:
                     last_error = exc
                     # Overloaded: switch models at once if we can; only the last model in the chain waits it out.

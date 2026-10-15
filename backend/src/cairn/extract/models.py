@@ -48,3 +48,11 @@ class ExtractionResult(BaseModel):
 class QuoteOnly(BaseModel):
     quote: str
     explanation: str = ""
+
+
+class ChallengeCheck(BaseModel):
+    """Second-opinion check for drift: the model must commit to a verdict, not just produce a quote."""
+
+    challenges: bool = Field(description="True only if the later text shows the premise is false or no longer holds.")
+    quote: str = ""
+    explanation: str = ""

@@ -14,6 +14,7 @@ from typing import Any
 
 from cairn.config import Settings
 from cairn.extract.grounding import verify_quote
+from cairn.extract.merge import attach, find_existing
 from cairn.extract.models import ExtractedDecision, ExtractionResult, QuotedClaim
 from cairn.graph.client import GraphStore
 from cairn.llm.client import LLM, LLMNotConfigured, LLMQuotaExhausted
@@ -88,7 +89,8 @@ class Report:
 
 _CANDIDATES = """
 MATCH (s:Source)
-WHERE s.kind IN ['pr', 'issue', 'discussion', 'doc']
+// ADRs/RFCs are parsed deterministically on import; everything else with a conversation is a candidate.
+WHERE s.kind IN ['pr', 'issue', 'discussion', 'doc', 'thread', 'ticket', 'meeting', 'postmortem', 'runbook']
   AND (s.extract_version IS NULL OR s.extract_version < $version)
   AND ($repo IS NULL OR s.repo = $repo)
   AND NOT (s.kind = 'pr' AND s.state = 'closed')
@@ -245,12 +247,42 @@ def ground(thread: Thread, result: ExtractionResult, report: Report) -> list[Gro
 
 
 def write_decisions(store: GraphStore, thread: Thread, decisions: list[GroundedDecision]) -> None:
-    # Re-extraction replaces this thread's previous decisions wholesale.
+    # Re-extraction replaces this thread's previous decisions and merges wholesale.
     store.query(
         "MATCH (d:Decision)-[:DECIDED_IN]->(:Source {uid: $uid}) OPTIONAL MATCH (d)-[:BECAUSE|REJECTED]->(p:Premise) DETACH DELETE d, p",
         {"uid": thread.uid},
     )
-    for g in decisions:
+    store.query("MATCH (p:Premise) WHERE p.uid STARTS WITH $prefix DETACH DELETE p", {"prefix": f"{thread.uid}::m"})
+    store.query("MATCH (:Decision)-[r:DISCUSSED_IN]->(:Source {uid: $uid}) DELETE r", {"uid": thread.uid})
+    for i, g in enumerate(decisions):
+        existing = find_existing(store, repo=thread.repo, ts=thread.ts, title=g.decision.title, systems=g.systems, exclude_thread=thread.uid)
+        if existing:
+            # Same decision seen in another source: link this thread and add only its new reasons.
+            rows = [
+                {
+                    "uid": f"{thread.uid}::m{i + 1}::p{j + 1}",
+                    "text": p.text[:500],
+                    "quote": p.quote[:400],
+                    "src": src,
+                    "rel": "BECAUSE",
+                    "option": None,
+                    "ts": thread.ts,
+                }
+                for j, (p, src) in enumerate(g.premises)
+            ] + [
+                {
+                    "uid": f"{thread.uid}::m{i + 1}::r{j + 1}",
+                    "text": r.text[:500],
+                    "quote": r.quote[:400],
+                    "src": src,
+                    "rel": "REJECTED",
+                    "option": r.option[:200],
+                    "ts": thread.ts,
+                }
+                for j, (r, src) in enumerate(g.rejected)
+            ]
+            attach(store, existing, thread.uid, rows, g.deciders)
+            continue
         d = g.decision
         store.query(
             """

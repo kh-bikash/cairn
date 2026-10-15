@@ -14,16 +14,17 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from cairn.agent.tools import _stem, _words
 from cairn.config import Settings
 from cairn.extract.grounding import verify_quote
-from cairn.extract.models import QuoteOnly
+from cairn.extract.models import ChallengeCheck
 from cairn.graph.client import GraphStore
 from cairn.llm.client import LLM, LLMNotConfigured, LLMQuotaExhausted
 from cairn.llm.decider import LLMDecider
 
 log = logging.getLogger(__name__)
 
-DRIFT_VERSION = 1
+DRIFT_VERSION = 2  # v2: relevance gate + confirmed verdicts
 _CANDIDATES_PER_PREMISE = 4
 _STOP = frozenset(
     [
@@ -120,6 +121,10 @@ LIMIT $k
 """
 
 
+def _stems(text: str) -> set[str]:
+    return {_stem(w) for w in _words(text) if w not in _STOP}
+
+
 def search_terms(text: str, limit: int = 6) -> str:
     """Build an OR query from the premise's most distinctive words."""
     words = []
@@ -137,6 +142,8 @@ class DriftReport:
     pairs_checked: int = 0
     challenges: int = 0
     unverified: int = 0
+    filtered: int = 0
+    rejected: int = 0
     errors: int = 0
     deferred: int = 0
     seconds: float = 0.0
@@ -148,9 +155,14 @@ async def check_premise(store: GraphStore, llm: LLM, decider: LLMDecider, premis
     candidates = []
     if query:
         candidates = store.records(_LATER, {"q": query, "repo": premise["repo"], "ts": premise["ts"] or 0, "premise": premise["uid"], "k": _CANDIDATES_PER_PREMISE})
+    premise_terms = _stems(premise["text"])
     for cand in candidates:
-        report.pairs_checked += 1
         later = f"{cand['title']}\n{(cand['body'] or '')[:2_500]}"
+        # Cheap relevance gate before any LLM call: short chatter or text sharing <2 topic words can't challenge it.
+        if len((cand["body"] or "").strip()) < 40 or len(premise_terms & _stems(later)) < 2:
+            report.filtered += 1
+            continue
+        report.pairs_checked += 1
         verdict = await decider.decide(
             "Compared with the PREMISE, what does the LATER text do? 'contradicts' = shows the premise is no longer true; "
             "'supersedes' = replaces the decision that relied on it; 'supports' = confirms it; 'unrelated' otherwise.",
@@ -159,22 +171,28 @@ async def check_premise(store: GraphStore, llm: LLM, decider: LLMDecider, premis
         )
         if verdict.answer not in {"contradicts", "supersedes"}:
             continue
-        quote = await llm.structured(
+        # Second opinion from the stronger model: it must agree there is a contradiction and quote the evidence.
+        check = await llm.structured(
             "extract",
             [
                 {
                     "role": "system",
-                    "content": "Copy the single sentence from LATER TEXT that most directly challenges the PREMISE, verbatim. "
-                    'Return JSON: {"quote": str, "explanation": str (one sentence)}.',
+                    "content": "Decide whether the LATER TEXT shows that the PREMISE is false or no longer holds. Be strict: "
+                    "mentioning the same topic, praising, or adding detail is NOT a challenge. If it is a challenge, copy the single "
+                    'sentence that shows it, verbatim. Return JSON: {"challenges": bool, "quote": str, "explanation": str (one sentence)}.',
                 },
                 {"role": "user", "content": f"PREMISE: {premise['text']}\n\nLATER TEXT:\n{later}"},
             ],
-            QuoteOnly,
+            ChallengeCheck,
             max_tokens=300,
         )
-        if not verify_quote(quote.quote, later):
+        if not check.challenges:
+            report.rejected += 1
+            continue
+        if not verify_quote(check.quote, later):
             report.unverified += 1
             continue
+        quote = check
         store.query(
             """
             MATCH (s:Source {uid: $src}), (p:Premise {uid: $premise})
