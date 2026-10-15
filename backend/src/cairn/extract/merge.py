@@ -8,6 +8,7 @@ from the chat where it started to the document that made it official.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from cairn.agent.tools import _stem, _words
@@ -44,6 +45,16 @@ _TITLE_STOP = frozenset(
 )
 
 
+_NUMBER = re.compile(r"\d+(?:\.\d+)?")
+
+
+def numbers_conflict(a: str, b: str) -> bool:
+    """'Use a 24h TTL' and 'Extend the TTL to 7 days' share every topic word but are two decisions: one changed the
+    other. When both titles carry numbers and they differ, the later one is a new decision, not a restatement."""
+    na, nb = set(_NUMBER.findall(a)), set(_NUMBER.findall(b))
+    return bool(na and nb and na != nb)
+
+
 def stems(text: str) -> set[str]:
     return {_stem(w) for w in _words(text) if w not in _TITLE_STOP}
 
@@ -64,6 +75,8 @@ def find_existing(store: GraphStore, *, repo: str, ts: int | None, title: str, s
     mine = stems(title)
     best: tuple[float, str] | None = None
     for r in rows:
+        if numbers_conflict(title, r["title"]):
+            continue
         overlap = mine & stems(r["title"])
         shared = set(systems) & set(r["systems"])
         shared_system = bool(shared)

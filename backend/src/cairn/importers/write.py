@@ -77,8 +77,11 @@ def _write_decisions(store: GraphStore, ws: Workspace) -> int:
             )
         if d["systems"]:
             store.query("MATCH (d:Decision {uid: $uid}) UNWIND $k AS k MATCH (s:System {key: k}) MERGE (d)-[:AFFECTS]->(s)", {"uid": d["uid"], "k": d["systems"]})
-        rows = [{"uid": f"{d['uid']}::p{i + 1}", "text": p, "rel": "BECAUSE", "option": None} for i, p in enumerate(d["premises"])]
-        rows += [{"uid": f"{d['uid']}::r{i + 1}", "text": r["text"], "rel": "REJECTED", "option": r["option"]} for i, r in enumerate(d["rejected"])]
+        rows = [{"uid": f"{d['uid']}::p{i + 1}", "text": p, "quote": p, "rel": "BECAUSE", "option": None} for i, p in enumerate(d["premises"])]
+        rows += [
+            {"uid": f"{d['uid']}::r{i + 1}", "text": r["text"], "quote": r.get("quote") or r["text"], "rel": "REJECTED", "option": r["option"]}
+            for i, r in enumerate(d["rejected"])
+        ]
         for rel in ("BECAUSE", "REJECTED"):
             subset = [r for r in rows if r["rel"] == rel]
             if subset:
@@ -89,7 +92,7 @@ def _write_decisions(store: GraphStore, ws: Workspace) -> int:
                     MERGE (p:Premise {{uid: r.uid}})
                     SET p.text = r.text, p.ts = $ts, p.kind = toLower('{rel}'), p.option = r.option
                     MERGE (d)-[:{rel}]->(p)
-                    MERGE (p)-[e:EVIDENCED_BY]->(t) SET e.quote = r.text
+                    MERGE (p)-[e:EVIDENCED_BY]->(t) SET e.quote = r.quote
                     """,
                     {"uid": d["uid"], "thread": d["thread"], "rows": subset, "ts": d["ts"]},
                 )

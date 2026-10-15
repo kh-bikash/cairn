@@ -117,6 +117,13 @@ OPTIONAL MATCH (s)-[:TOUCHES]->(m:System)
 RETURN s {.uid, .repo, .kind, .title, .url, .ts, .author, .body} AS src, replies, collect(DISTINCT m.key) AS modules
 """
 
+# Slack threads, tickets and docs don't touch code; the systems they name are their subject.
+_MENTIONED = """
+MATCH (s:Source {uid: $uid})-[:MENTIONS]->(m:System) RETURN m.key AS key
+UNION
+MATCH (:Source {uid: $uid})<-[:REPLY_TO]-(:Source)-[:MENTIONS]->(m:System) RETURN m.key AS key
+"""
+
 # Separate query on purpose: filtered OPTIONAL MATCH after an aggregating WITH is unreliable in FalkorDB.
 _REPO_MODULES = "MATCH (m:System) WHERE m.repo = $repo AND m.kind = 'code' RETURN m.key AS key ORDER BY key"
 
@@ -133,6 +140,9 @@ def load_thread(store: GraphStore, uid: str) -> Thread | None:
             segments.append(Segment(f"S{len(segments) + 1}", reply["uid"], reply.get("author"), reply.get("kind") or "comment", reply["body"]))
     participants = sorted({s.author for s in segments if s.author})
     repo_modules = [m["key"] for m in store.records(_REPO_MODULES, {"repo": src["repo"]})]
+    modules = [m for m in r["modules"] if m]
+    if not modules:
+        modules = sorted(m["key"] for m in store.records(_MENTIONED, {"uid": uid}))
     return Thread(
         uid=src["uid"],
         repo=src["repo"],
@@ -143,7 +153,7 @@ def load_thread(store: GraphStore, uid: str) -> Thread | None:
         author=src.get("author"),
         segments=segments,
         participants=participants,
-        modules=[m for m in r["modules"] if m],
+        modules=modules,
         repo_modules=repo_modules,
     )
 

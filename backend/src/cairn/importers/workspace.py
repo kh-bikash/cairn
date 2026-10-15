@@ -385,8 +385,10 @@ def _parse_decision(ws: Workspace, uid: str, meta: dict[str, Any], title: str, t
         if _REJECTED_HEADINGS.search(k):
             for b in _bullets(v):
                 # "**Option**: reason", "Option: reason", "Option — reason": the option is the leading phrase.
-                option = re.split(r"\*\*:?\s*|:\s+| — | - ", b.strip("* "), maxsplit=1)[0]
-                rejected.append({"option": option.strip("*: ")[:200], "text": b})
+                parts = re.split(r"\*\*:?\s*|:\s+| — | - ", b.strip("* "), maxsplit=1)
+                option = parts[0].strip("*: ")[:200]
+                reason = parts[1].strip(" *:") if len(parts) > 1 and parts[1].strip(" *:") else b
+                rejected.append({"option": option, "text": reason, "quote": b})
     if not statement and not premises:
         return
     status = str(meta.get("status") or "accepted").lower()

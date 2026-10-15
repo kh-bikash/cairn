@@ -197,3 +197,11 @@ def test_clean_params_replaces_lone_surrogates() -> None:
     broken = "half an emoji " + chr(0xD83D) + " here"
     assert clean_params({"rows": [{"body": broken}]}) == {"rows": [{"body": "half an emoji � here"}]}
     assert clean_params("fine \U0001f389") == "fine \U0001f389"
+
+
+def test_decisions_with_different_numbers_are_not_merged() -> None:
+    from cairn.extract.merge import numbers_conflict
+
+    assert numbers_conflict("Use Redis with 24h TTL for webhook idempotency", "Extend idempotency key TTL to 7 days")
+    assert not numbers_conflict("Move the events pipeline to Amazon MSK", "Adopt AWS MSK for Kafka")
+    assert not numbers_conflict("Adopt RFC-0007 OR-Tools", "Replace the greedy heuristic with OR-Tools"), "one side without numbers"
