@@ -7,7 +7,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -278,6 +278,15 @@ def _locate(rel: str) -> Path | None:
     return None
 
 
+def _report_replay(report: dict[str, Any]) -> None:
+    console.print_json(json.dumps(report))
+    if report.get("mode") == "replay" and report.get("deferred") and not report.get("extracted_threads"):
+        console.print(
+            "[bold red]No cached model responses matched.[/] The snapshot replays only with the model settings that "
+            "produced it (the defaults in .env.example); check CAIRN_MODEL_* or add an API key to extract live."
+        )
+
+
 @app.command()
 def demo(
     src: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz",
@@ -312,7 +321,7 @@ def demo(
     derive_expertise(store)
     derive_collaboration(store)
     console.print(f"loaded {len(repos)} repos")
-    console.print_json(json.dumps(asyncio.run(run_extraction(store, llm, s, limit=100_000))))
+    _report_replay(asyncio.run(run_extraction(store, llm, s, limit=100_000)))
     console.print_json(json.dumps(asyncio.run(run_drift(store, llm, s, limit=100_000))))
     console.print_json(json.dumps(store.counts()))
 
@@ -323,7 +332,7 @@ def demo(
         console.print(f"[bold]{ws.name} workspace[/] ({name})")
         ws_store = GraphStore(s, graph_name=name)
         import_workspace(ws_store, ws)
-        console.print_json(json.dumps(asyncio.run(run_extraction(ws_store, llm, s, limit=100_000))))
+        _report_replay(asyncio.run(run_extraction(ws_store, llm, s, limit=100_000)))
         console.print_json(json.dumps(asyncio.run(run_drift(ws_store, llm, s, limit=100_000))))
         console.print_json(json.dumps(ws_store.counts()))
     console.print("[green]✓[/] demo ready")

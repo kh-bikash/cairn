@@ -1,0 +1,42 @@
+[
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "New dashboard for on-time delivery rate is live.",
+  "ts": "1790158440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Ack.",
+  "ts": "1790158740.000001",
+  "thread_ts": "1790158440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "👍",
+  "ts": "1790159280.000001",
+  "thread_ts": "1790158440.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "dbt run failed on the orders model again, rerunning.",
+  "ts": "1790164320.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Can you share the dashboard link?",
+  "ts": "1790164620.000001",
+  "thread_ts": "1790164320.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "👍",
+  "ts": "1790165160.000001",
+  "thread_ts": "1790164320.000001"
+ }
+]

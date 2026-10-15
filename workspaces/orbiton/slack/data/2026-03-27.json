@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "New dashboard for on-time delivery rate is live.",
+  "ts": "1774612380.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Thanks!",
+  "ts": "1774612680.000001",
+  "thread_ts": "1774612380.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Looking now.",
+  "ts": "1774613220.000001",
+  "thread_ts": "1774612380.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Backfilling warehouse-db events for last week after the schema change.",
+  "ts": "1774622520.000001"
+ }
+]

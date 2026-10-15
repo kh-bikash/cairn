@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Backfilling warehouse-db events for last week after the schema change.",
+  "ts": "1784550660.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "👍",
+  "ts": "1784550960.000001",
+  "thread_ts": "1784550660.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Looking now.",
+  "ts": "1784551500.000001",
+  "thread_ts": "1784550660.000001"
+ }
+]

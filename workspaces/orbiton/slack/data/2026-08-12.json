@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "New dashboard for on-time delivery rate is live.",
+  "ts": "1786547100.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Can you share the dashboard link?",
+  "ts": "1786547400.000001",
+  "thread_ts": "1786547100.000001"
+ }
+]

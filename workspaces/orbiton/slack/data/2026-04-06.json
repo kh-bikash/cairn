@@ -1,0 +1,28 @@
+[
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "Backfilling analytics-warehouse events for last week after the schema change.",
+  "ts": "1775485980.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "New dashboard for on-time delivery rate is live.",
+  "ts": "1775486160.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Same here.",
+  "ts": "1775486280.000001",
+  "thread_ts": "1775485980.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Looking now.",
+  "ts": "1775486820.000001",
+  "thread_ts": "1775485980.000001"
+ }
+]

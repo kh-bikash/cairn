@@ -4,7 +4,8 @@
 !.env.example
 
 # data: raw GitHub snapshots and LLM response cache are rebuilt with `cairn fetch` / `cairn extract`
-data/
+# (root only: a workspace may well have a Slack channel called #data)
+/data/
 
 # python
 __pycache__/

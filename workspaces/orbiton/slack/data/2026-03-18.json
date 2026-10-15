@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "New dashboard for on-time delivery rate is live.",
+  "ts": "1773825600.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Backfilling warehouse-db events for last week after the schema change.",
+  "ts": "1773839640.000001"
+ }
+]

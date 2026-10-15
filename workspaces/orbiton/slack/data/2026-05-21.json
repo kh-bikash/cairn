@@ -1,0 +1,42 @@
+[
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "dbt run failed on the orders model again, rerunning.",
+  "ts": "1779368220.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Same here.",
+  "ts": "1779368520.000001",
+  "thread_ts": "1779368220.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Done.",
+  "ts": "1779369060.000001",
+  "thread_ts": "1779368220.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "New dashboard for on-time delivery rate is live.",
+  "ts": "1779370620.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Thanks!",
+  "ts": "1779370920.000001",
+  "thread_ts": "1779370620.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Looking now.",
+  "ts": "1779371460.000001",
+  "thread_ts": "1779370620.000001"
+ }
+]

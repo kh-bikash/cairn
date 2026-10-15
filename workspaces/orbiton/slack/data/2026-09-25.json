@@ -1,0 +1,8 @@
+[
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "dbt run failed on the orders model again, rerunning.",
+  "ts": "1790325120.000001"
+ }
+]

@@ -1,0 +1,22 @@
+[
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "New dashboard for on-time delivery rate is live.",
+  "ts": "1783075320.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Ack.",
+  "ts": "1783075620.000001",
+  "thread_ts": "1783075320.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Done.",
+  "ts": "1783076160.000001",
+  "thread_ts": "1783075320.000001"
+ }
+]

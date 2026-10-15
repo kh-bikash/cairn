@@ -72,9 +72,11 @@ class Settings(BaseSettings):
     typesafe_api_key: SecretStr | None = Field(default=None, validation_alias="TYPESAFE_API_KEY")
 
     # Model roles, each "provider:model".
-    model_decide: str = "groq:llama-3.1-8b-instant"
-    model_extract: str = "groq:llama-3.3-70b-versatile"
-    model_agent: str = "gemini:gemini-2.5-flash"
+    # Defaults match .env.example and the demo snapshot: the cache is keyed by model, so a keyless replay only
+    # finds responses for the models that produced them.
+    model_decide: str = "groq:openai/gpt-oss-20b,groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b,gemini:gemini-2.5-flash-lite"
+    model_extract: str = "groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b,gemini:gemini-3.5-flash,gemini:gemini-2.5-flash"
+    model_agent: str = "groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b,gemini:gemini-2.5-flash,gemini:gemini-3.8-flash"
     typesafe_base_url: str | None = None
     llm_cache: bool = True
     llm_max_concurrency: int = 4

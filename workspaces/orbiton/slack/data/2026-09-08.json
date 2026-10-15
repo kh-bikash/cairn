@@ -1,0 +1,15 @@
+[
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "dbt run failed on the orders model again, rerunning.",
+  "ts": "1788873780.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01017",
+  "text": "Thanks!",
+  "ts": "1788874080.000001",
+  "thread_ts": "1788873780.000001"
+ }
+]

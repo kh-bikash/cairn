@@ -1,0 +1,14 @@
+[
+ {
+  "type": "message",
+  "user": "U01016",
+  "text": "dbt run failed on the orders model again, rerunning.",
+  "ts": "1785753900.000001"
+ },
+ {
+  "type": "message",
+  "user": "U01018",
+  "text": "Backfilling warehouse-db events for last week after the schema change.",
+  "ts": "1785765840.000001"
+ }
+]
