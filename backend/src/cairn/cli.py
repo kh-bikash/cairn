@@ -329,6 +329,21 @@ def demo(
     console.print("[green]✓[/] demo ready")
 
 
+@app.command()
+def bootstrap(
+    src: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz",
+    sample: Annotated[str, typer.Option()] = "workspaces/orbiton",
+) -> None:
+    """Build the demo workspaces only if FalkorDB has none yet (safe to run on every container start)."""
+    from cairn.workspaces import graph_names
+
+    s = get_settings()
+    if s.graph_name in graph_names(s):
+        console.print(f"graph {s.graph_name} exists; nothing to do")
+        return
+    demo(src=src, sample=sample)
+
+
 workspace_app = typer.Typer(no_args_is_help=True, help="Import a company's exports (Slack, Jira/Linear CSV, docs, org chart).")
 app.add_typer(workspace_app, name="workspace")
 

@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+data/
+web/
+eval/
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+backend/tests/
+.git/
