@@ -15,16 +15,19 @@ def test_pack_unpack_roundtrip_is_reproducible(tmp_path: Path) -> None:
     (src / "raw" / "o__r" / "prs.jsonl").write_text('{"n": 1}\n', encoding="utf-8")
     (src / "llm-cache" / "ab").mkdir(parents=True)
     (src / "llm-cache" / "ab" / "abc.json").write_text("{}", encoding="utf-8")
+    (src / "graphs").mkdir()
+    (src / "graphs" / "cairn.json.gz").write_bytes(b"graph export")
     (src / "okf").mkdir()
     (src / "okf" / "index.md").write_text("not packed", encoding="utf-8")
 
     a, b = tmp_path / "a.tar.gz", tmp_path / "b.tar.gz"
-    assert pack(src, a) == {"raw": 1, "llm-cache": 1}
+    assert pack(src, a) == {"graphs": 1, "raw": 1, "llm-cache": 1}
     pack(src, b)
     assert a.read_bytes() == b.read_bytes(), "archives are byte-for-byte reproducible"
 
     dst = tmp_path / "dst"
-    assert unpack(a, dst) == 2
+    assert unpack(a, dst) == 3
+    assert (dst / "graphs" / "cairn.json.gz").read_bytes() == b"graph export"
     assert (dst / "raw" / "o__r" / "prs.jsonl").read_text(encoding="utf-8") == '{"n": 1}\n'
     assert not (dst / "okf").exists()
 

@@ -44,11 +44,14 @@ read the raw "company" yourself. Each workspace is its own FalkorDB graph, switc
 
 ```bash
 docker compose up -d --build              # FalkorDB :6379 (+ Browser :3000), API :8000, web :8080
-docker compose run --rm api cairn demo    # build both workspaces from the snapshot, replay extraction
+docker compose run --rm api cairn demo    # restore both workspaces from the snapshot (~10 s)
 ```
 
-Open http://localhost:8080. `cairn demo` restores `demo/cairn-snapshot.tar.gz` (raw GitHub data plus cached model
-responses), imports Orbiton, and replays extraction and drift, so it needs no GitHub token and no LLM key.
+Open http://localhost:8080. `demo/cairn-snapshot.tar.gz` holds both finished workspace graphs, the raw GitHub data
+and the cached model responses. `cairn demo` restores the graphs exactly as the live site has them, so it needs no
+GitHub token and no LLM key. `cairn demo --rebuild` instead rebuilds everything from the raw data and the Orbiton
+exports, replaying cached model responses (threads without a cached response are skipped unless a key is set).
+
 Without an LLM key, chat runs in graph-only mode: questions are routed straight to the graph tools and answered
 deterministically. Add a free [Groq](https://console.groq.com/keys) key to `.env` for full answers.
 

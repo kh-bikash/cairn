@@ -225,3 +225,20 @@ def test_workflows_on_sample_company(store: GraphStore) -> None:
     assert handoff.data["areas"] and "Handoff plan" in handoff.data["draft"]
     incident = wf.incident_memory(tools, "sessions lost on every deploy")
     assert any(i["uid"] == "acme/api#5" for i in incident.data["similar_incidents"]) or incident.data["note"]
+
+
+def test_graph_export_import_round_trip(store: GraphStore, tmp_path: Path) -> None:
+    from cairn.graph import portable
+
+    path = tmp_path / "g.json.gz"
+    portable.save(portable.export_graph(store), path)
+    copy = GraphStore(_settings(tmp_path), graph_name=f"{store.name}_copy")
+    try:
+        portable.import_graph(copy, portable.load(path))
+        assert copy.counts() == store.counts()
+        assert copy.records("MATCH (n) WHERE n._pid IS NOT NULL RETURN count(n) AS c")[0]["c"] == 0, "temporary ids are removed"
+        original = dispatch(Tools(store), "why", {"topic": "session cache redis"}).data
+        restored = dispatch(Tools(copy), "why", {"topic": "session cache redis"}).data
+        assert restored == original, "tools answer identically on the restored graph (full-text indexes included)"
+    finally:
+        copy.drop()

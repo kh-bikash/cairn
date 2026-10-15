@@ -249,12 +249,23 @@ app.add_typer(snapshot_app, name="snapshot")
 
 @snapshot_app.command("pack")
 def snapshot_pack(out: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz") -> None:
-    """Bundle data/raw and data/llm-cache into one archive."""
+    """Bundle the finished workspace graphs, raw data and the LLM cache into one archive."""
     from pathlib import Path
 
+    from cairn.graph import portable
+    from cairn.graph.client import GraphStore
     from cairn.snapshot import pack
+    from cairn.workspaces import graph_names
 
-    counts = pack(get_settings().data_dir, Path(out))
+    s = get_settings()
+    graphs_dir = s.data_dir / "graphs"
+    for old in graphs_dir.glob("*.json.gz"):
+        old.unlink()
+    for name in graph_names(s):
+        data = portable.export_graph(GraphStore(s, graph_name=name))
+        portable.save(data, graphs_dir / f"{name}.json.gz")
+        console.print(f"exported {name}: {len(data['nodes'])} nodes, {len(data['edges'])} relationships")
+    counts = pack(s.data_dir, Path(out))
     size = Path(out).stat().st_size / 1e6
     console.print(f"[green]✓[/] {out} ({size:.1f} MB): {counts}")
 
@@ -291,8 +302,9 @@ def _report_replay(report: dict[str, Any]) -> None:
 def demo(
     src: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz",
     sample: Annotated[str, typer.Option(help="Sample company workspace to import alongside GitHub.")] = "workspaces/orbiton",
+    rebuild: Annotated[bool, typer.Option(help="Rebuild from raw data by replaying cached model responses instead of restoring the graphs.")] = False,
 ) -> None:
-    """One command for judges: restore the snapshot, build both workspaces, replay extraction and drift (no keys needed)."""
+    """One command for judges: restore the demo workspaces exactly as the live site has them (no keys needed)."""
     from cairn.derive.expertise import derive_collaboration, derive_expertise
     from cairn.extract.drift import run_drift
     from cairn.extract.pipeline import run_extraction
@@ -310,6 +322,16 @@ def demo(
         console.print(f"restored {unpack(snapshot, s.data_dir)} files from {snapshot}")
     else:
         console.print(f"[yellow]no snapshot at {src}; using whatever is already in {s.data_dir}[/]")
+    exports = sorted((s.data_dir / "graphs").glob("*.json.gz"))
+    if exports and not rebuild:
+        from cairn.graph import portable
+
+        for path in exports:
+            name = path.name.removesuffix(".json.gz")
+            counts = portable.import_graph(GraphStore(s, graph_name=name), portable.load(path))
+            console.print(f"restored graph {name}: {counts['nodes']} nodes, {counts['edges']} relationships")
+        console.print("[green]✓[/] demo ready")
+        return
     llm = LLM(s)
 
     console.print("[bold]GitHub workspace[/]")

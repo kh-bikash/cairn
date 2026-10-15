@@ -1,4 +1,4 @@
-"""Pack and unpack a reproducible demo snapshot: raw GitHub data plus the LLM response cache.
+"""Pack and unpack a reproducible demo snapshot: finished graphs, raw GitHub data and the LLM response cache.
 
 With a snapshot, anyone can rebuild the exact demo graph with no GitHub token and no LLM keys:
 loading is deterministic and extraction/drift replay cached model responses.
@@ -11,7 +11,7 @@ import tarfile
 from pathlib import Path
 
 DEFAULT_SNAPSHOT = Path("demo") / "cairn-snapshot.tar.gz"
-_PARTS = ("raw", "llm-cache")
+_PARTS = ("graphs", "raw", "llm-cache")
 
 
 def pack(data_dir: Path, out: Path) -> dict[str, int]:
