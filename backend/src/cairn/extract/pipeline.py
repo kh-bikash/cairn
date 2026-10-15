@@ -22,7 +22,7 @@ from cairn.llm.decider import LLMDecider
 
 log = logging.getLogger(__name__)
 
-EXTRACT_VERSION = 1
+EXTRACT_VERSION = 2  # v2: decisions restated across sources are merged
 _SEGMENT_CHARS = 2_500
 _THREAD_CHARS = 14_000
 _MAX_SEGMENTS = 14
@@ -95,16 +95,11 @@ WHERE s.kind IN ['pr', 'issue', 'discussion', 'doc', 'thread', 'ticket', 'meetin
   AND ($repo IS NULL OR s.repo = $repo)
   AND NOT (s.kind = 'pr' AND s.state = 'closed')
 OPTIONAL MATCH (c:Source)-[:REPLY_TO]->(s)
-WITH s, count(c) AS replies, size(coalesce(s.body, '')) AS body_len, toLower(coalesce(s.body, '')) AS b
+WITH s, count(c) AS replies, size(coalesce(s.body, '')) AS body_len
 WHERE s.kind = 'doc' OR body_len >= 300 OR replies >= 2
-// Decisions live where people argue: rank threads by rationale language so scarce LLM calls go where they pay off.
-WITH s, replies, body_len,
-     CASE WHEN b CONTAINS 'rather than' THEN 3 ELSE 0 END + CASE WHEN b CONTAINS 'instead of' THEN 2 ELSE 0 END +
-     CASE WHEN b CONTAINS 'because' THEN 2 ELSE 0 END + CASE WHEN b CONTAINS 'trade-off' OR b CONTAINS 'tradeoff' THEN 3 ELSE 0 END +
-     CASE WHEN b CONTAINS '## why' OR b CONTAINS 'motivation' OR b CONTAINS 'rationale' THEN 3 ELSE 0 END +
-     CASE WHEN b CONTAINS 'we decided' OR b CONTAINS 'we chose' OR b CONTAINS 'decision' THEN 2 ELSE 0 END +
-     CASE WHEN b CONTAINS 'alternative' OR b CONTAINS 'considered' THEN 2 ELSE 0 END +
-     CASE WHEN s.state = 'merged' THEN 1 ELSE 0 END AS signal
+// Decisions live where people argue: rank by rationale language (scored in Python at load time, see
+// ingest.text.rationale_signal) so scarce LLM calls go where they pay off.
+WITH s, replies, body_len, coalesce(s.signal, 0) + CASE WHEN s.state = 'merged' THEN 1 ELSE 0 END AS signal
 RETURN s.uid AS uid, replies, body_len, signal
 ORDER BY signal DESC, replies * 400 + body_len DESC
 LIMIT $limit

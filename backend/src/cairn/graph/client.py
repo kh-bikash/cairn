@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -116,7 +117,7 @@ class GraphStore:
 
     # ------------------------------------------------------------------ querying
     def query(self, cypher: str, params: Mapping[str, Any] | None = None, *, timeout_ms: int = 60_000) -> list[list[Any]]:
-        result = self._graph.query(cypher, dict(params or {}), timeout=timeout_ms)
+        result = self._graph.query(cypher, clean_params(dict(params or {})), timeout=timeout_ms)
         rows: list[list[Any]] = result.result_set
         return rows
 
@@ -142,7 +143,7 @@ class GraphStore:
         total = 0
         for chunk in _chunks(rows, batch_size):
             # The stock image defaults to a 1s query timeout; batched MERGEs need more headroom.
-            self._graph.query(cypher, {"rows": list(chunk)}, timeout=120_000)
+            self._graph.query(cypher, {"rows": clean_params(list(chunk))}, timeout=120_000)
             total += len(chunk)
         return total
 
@@ -194,3 +195,17 @@ def _chunks(rows: Sequence[Any], size: int) -> Iterator[Sequence[Any]]:
 
 def flatten(values: Iterable[Iterable[Any]]) -> list[Any]:
     return [v for row in values for v in row]
+
+
+_SURROGATE = re.compile("[\ud800-\udfff]")
+
+
+def clean_params(value: Any) -> Any:
+    """Replace unpaired UTF-16 surrogates (half an emoji in scraped text) so FalkorDB never stores invalid UTF-8."""
+    if isinstance(value, str):
+        return _SURROGATE.sub("�", value) if _SURROGATE.search(value) else value
+    if isinstance(value, dict):
+        return {k: clean_params(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return [clean_params(v) for v in value]
+    return value

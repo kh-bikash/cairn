@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import sys
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -269,34 +270,63 @@ def snapshot_unpack(src: Annotated[str, typer.Option()] = "demo/cairn-snapshot.t
     console.print(f"[green]✓[/] restored {n} files from {src}")
 
 
-@app.command()
-def demo(src: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz") -> None:
-    """One command for judges: restore the snapshot, build the graph, replay extraction and drift (no keys needed)."""
-    from pathlib import Path
+def _locate(rel: str) -> Path | None:
+    """Find a repo-level path whether we run from the repo root, backend/, or the /app container."""
+    for candidate in (Path(rel), Path("..") / rel):
+        if candidate.exists():
+            return candidate
+    return None
 
+
+@app.command()
+def demo(
+    src: Annotated[str, typer.Option()] = "demo/cairn-snapshot.tar.gz",
+    sample: Annotated[str, typer.Option(help="Sample company workspace to import alongside GitHub.")] = "workspaces/orbiton",
+) -> None:
+    """One command for judges: restore the snapshot, build both workspaces, replay extraction and drift (no keys needed)."""
     from cairn.derive.expertise import derive_collaboration, derive_expertise
     from cairn.extract.drift import run_drift
     from cairn.extract.pipeline import run_extraction
     from cairn.github.fetch import load_snapshot
     from cairn.graph.client import GraphStore
+    from cairn.importers.workspace import read_workspace
+    from cairn.importers.write import import_workspace
     from cairn.ingest.loader import build_rows, write_rows
     from cairn.llm.client import LLM
     from cairn.snapshot import unpack
 
     s = get_settings()
-    if Path(src).exists():
-        console.print(f"restored {unpack(Path(src), s.data_dir)} files from {src}")
+    snapshot = _locate(src)
+    if snapshot:
+        console.print(f"restored {unpack(snapshot, s.data_dir)} files from {snapshot}")
+    else:
+        console.print(f"[yellow]no snapshot at {src}; using whatever is already in {s.data_dir}[/]")
+    llm = LLM(s)
+
+    console.print("[bold]GitHub workspace[/]")
     store = GraphStore(s)
     store.drop()
-    repos = [r for r in s.repos if (s.raw_dir / r.replace("/", "__") / "meta.json").exists()]
+    # The snapshot defines the scope: load every repo it contains.
+    repos = sorted(json.loads(m.read_text(encoding="utf-8"))["nameWithOwner"] for m in s.raw_dir.glob("*/meta.json"))
     write_rows(store, build_rows([load_snapshot(s.raw_dir, r) for r in repos]))
     derive_expertise(store)
     derive_collaboration(store)
-    llm = LLM(s)
+    console.print(f"loaded {len(repos)} repos")
     console.print_json(json.dumps(asyncio.run(run_extraction(store, llm, s, limit=100_000))))
     console.print_json(json.dumps(asyncio.run(run_drift(store, llm, s, limit=100_000))))
-    console.print("[green]✓[/] demo graph ready")
     console.print_json(json.dumps(store.counts()))
+
+    folder = _locate(sample)
+    if folder:
+        ws = read_workspace(folder)
+        name = workspace_graph(ws.name)
+        console.print(f"[bold]{ws.name} workspace[/] ({name})")
+        ws_store = GraphStore(s, graph_name=name)
+        import_workspace(ws_store, ws)
+        console.print_json(json.dumps(asyncio.run(run_extraction(ws_store, llm, s, limit=100_000))))
+        console.print_json(json.dumps(asyncio.run(run_drift(ws_store, llm, s, limit=100_000))))
+        console.print_json(json.dumps(ws_store.counts()))
+    console.print("[green]✓[/] demo ready")
 
 
 workspace_app = typer.Typer(no_args_is_help=True, help="Import a company's exports (Slack, Jira/Linear CSV, docs, org chart).")

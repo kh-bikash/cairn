@@ -32,7 +32,8 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
-      - ./demo:/app/demo:ro   # reproducible demo snapshot (`cairn demo`)
+      - ./demo:/app/demo:ro               # reproducible demo snapshot (`cairn demo`)
+      - ./workspaces:/app/workspaces:ro   # sample company exports (Orbiton)
     depends_on:
       falkordb:
         condition: service_healthy

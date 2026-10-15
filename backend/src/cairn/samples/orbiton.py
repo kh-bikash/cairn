@@ -751,7 +751,7 @@ def _employed(handle: str, when: datetime) -> bool:
 
 def background_tickets(rng: random.Random) -> list[Ticket]:
     team_members: dict[str, list[str]] = defaultdict(list)
-    for h, _, team, _, _, _, left in PEOPLE:
+    for h, _, team, _, _, _, _left in PEOPLE:
         if team != "product":
             team_members[team].append(h)
     owners = {s[0]: s[3] for s in SYSTEMS}

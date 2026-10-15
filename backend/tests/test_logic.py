@@ -189,3 +189,11 @@ def test_refs_are_annotated_inline() -> None:
     data = {"premises": [{"claim": "c", "source": "x#1"}, {"claim": "d", "source": "unknown"}]}
     out = annotate_refs(data, ledger)
     assert out["premises"][0]["ref"] == 1 and "ref" not in out["premises"][1]
+
+
+def test_clean_params_replaces_lone_surrogates() -> None:
+    from cairn.graph.client import clean_params
+
+    broken = "half an emoji " + chr(0xD83D) + " here"
+    assert clean_params({"rows": [{"body": broken}]}) == {"rows": [{"body": "half an emoji � here"}]}
+    assert clean_params("fine \U0001f389") == "fine \U0001f389"

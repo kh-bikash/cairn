@@ -14,6 +14,7 @@ from cairn.agent.tools import _stem, _words
 from cairn.graph.client import GraphStore
 
 _WINDOW_MS = 120 * 86_400_000  # decisions more than ~4 months apart are treated as distinct
+_CLOSE_MS = 45 * 86_400_000  # within ~6 weeks, one distinctive shared word on the same system is enough
 _TITLE_STOP = frozenset(
     [
         "use",
@@ -56,7 +57,7 @@ def find_existing(store: GraphStore, *, repo: str, ts: int | None, title: str, s
         MATCH (d:Decision)-[:DECIDED_IN]->(t:Source)
         WHERE d.repo = $repo AND t.uid <> $thread AND d.ts >= $lo AND d.ts <= $hi
         OPTIONAL MATCH (d)-[:AFFECTS]->(s:System)
-        RETURN d.uid AS uid, d.title AS title, d.confidence AS confidence, collect(s.key) AS systems
+        RETURN d.uid AS uid, d.title AS title, d.confidence AS confidence, d.ts AS ts, collect(s.key) AS systems
         """,
         {"repo": repo, "thread": exclude_thread, "lo": ts - _WINDOW_MS, "hi": ts + _WINDOW_MS},
     )
@@ -64,8 +65,15 @@ def find_existing(store: GraphStore, *, repo: str, ts: int | None, title: str, s
     best: tuple[float, str] | None = None
     for r in rows:
         overlap = mine & stems(r["title"])
-        shared_system = bool(set(systems) & set(r["systems"]))
-        if len(overlap) < 2 or not (shared_system or len(overlap) >= 3):
+        shared = set(systems) & set(r["systems"])
+        shared_system = bool(shared)
+        # Words that only name the shared system ("events", "pipeline") say nothing about the decision itself.
+        system_words = {s for key in shared for s in stems(key.replace(":", " ").replace("/", " ").replace("-", " "))}
+        distinctive = overlap - system_words
+        strict = len(overlap) >= 2 and (shared_system or len(overlap) >= 3)
+        # Same system, a few weeks apart, and a shared distinctive word ("msk", "gurobi"): the same decision restated.
+        close = shared_system and r.get("ts") is not None and abs(int(r["ts"]) - ts) <= _CLOSE_MS and len(distinctive) >= 1
+        if not (strict or close):
             continue
         score = len(overlap) / max(1, len(mine | stems(r["title"]))) + (0.5 if shared_system else 0.0) + (r["confidence"] or 0) * 0.1
         if best is None or score > best[0]:

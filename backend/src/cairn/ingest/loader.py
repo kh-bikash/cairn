@@ -18,6 +18,7 @@ from cairn.ingest.text import (
     extract_refs,
     is_bot,
     login_of,
+    rationale_signal,
     to_ms,
     top_uid,
 )
@@ -151,6 +152,7 @@ def _top_source(repo: str, item: dict[str, Any], kind: str, state: str, author: 
         "state": state,
         "author": author or login_of(item.get("author")),
         "labels": [lbl["name"] for lbl in (item.get("labels") or {}).get("nodes", [])],
+        "signal": rationale_signal(f"{item.get('title') or ''}\n{item.get('body') or ''}"),
     }
 
 
@@ -268,7 +270,7 @@ def _dedupe(items: list[dict[str, Any]], keys: tuple[str, ...]) -> list[dict[str
 
 _SOURCE_SET = """
 SET s.kind = r.kind, s.repo = r.repo, s.number = r.number, s.title = r.title, s.body = r.body,
-    s.url = r.url, s.ts = r.ts, s.state = r.state, s.author = r.author, s.labels = r.labels
+    s.url = r.url, s.ts = r.ts, s.state = r.state, s.author = r.author, s.labels = r.labels, s.signal = coalesce(r.signal, 0)
 """
 
 WRITES: list[tuple[str, str]] = [

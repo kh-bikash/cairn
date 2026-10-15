@@ -219,7 +219,8 @@ def source_detail(store: GraphStore, uid: str) -> dict[str, Any] | None:
     src = rows[0]
     parent = store.records("MATCH (:Source {uid: $u})-[:REPLY_TO]->(p:Source) RETURN p.uid AS uid, p.title AS title, p.kind AS kind", {"u": uid})
     replies = store.records(
-        "MATCH (c:Source)-[:REPLY_TO]->(:Source {uid: $u}) RETURN c.uid AS uid, c.kind AS kind, c.author AS author, c.body AS body, c.ts AS ts, c.url AS url ORDER BY ts",
+        "MATCH (c:Source)-[:REPLY_TO]->(:Source {uid: $u}) "
+        "RETURN c.uid AS uid, c.kind AS kind, c.author AS author, c.body AS body, c.ts AS ts, c.url AS url ORDER BY ts",
         {"u": uid},
     )
     decisions = store.records(

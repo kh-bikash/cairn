@@ -149,7 +149,9 @@ def derive_expertise(store: GraphStore, *, min_score: float = 0.05) -> int:
         UNWIND $rows AS r
         MATCH (p:Person {handle: r.handle}), (s:System {key: r.key})
         MERGE (p)-[e:KNOWS_ABOUT]->(s)
-        SET e.score = r.score, e.lifetime = r.lifetime, e.last_ts = r.last_ts, e.authored = r.authored, e.reviewed = r.reviewed, e.merged = r.merged, e.commented = r.commented, e.worked = r.worked, e.wrote = r.wrote, e.chatted = r.chatted, e.decided = r.decided, e.discussed = r.discussed
+        SET e.score = r.score, e.lifetime = r.lifetime, e.last_ts = r.last_ts, e.authored = r.authored, e.reviewed = r.reviewed,
+            e.merged = r.merged, e.commented = r.commented, e.worked = r.worked, e.wrote = r.wrote, e.chatted = r.chatted,
+            e.decided = r.decided, e.discussed = r.discussed
         """,
         rows,
     )

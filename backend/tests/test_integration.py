@@ -196,7 +196,10 @@ async def test_agent_router_mode_answers_with_citations(store: GraphStore, tmp_p
         ("Who knows billing in api?", ("who_knows", {"system": "acme/api:api/billing"})),
         ("What breaks if acme/client goes down?", ("impact", {"system": "acme/client"})),
         ("What happens if bob leaves?", ("handoff_plan", {"handle": "bob"})),
-        ("We are about to change the cache, what breaks?", ("change_impact", {"system": "acme/api:api/cache", "change": "We are about to change the cache, what breaks?"})),
+        (
+            "We are about to change the cache, what breaks?",
+            ("change_impact", {"system": "acme/api:api/cache", "change": "We are about to change the cache, what breaks?"}),
+        ),
         ("Billing webhook outage: invoices failing", ("incident_memory", {"description": "Billing webhook outage: invoices failing"})),
         ("Why did we choose Redis?", ("why", {"topic": "Redis"})),
     ],

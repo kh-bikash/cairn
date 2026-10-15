@@ -35,7 +35,7 @@ from typing import Any
 import yaml
 
 from cairn.ingest.loader import Rows
-from cairn.ingest.text import clip
+from cairn.ingest.text import clip, rationale_signal
 
 log = logging.getLogger(__name__)
 
@@ -206,6 +206,7 @@ def _source(
         "state": state,
         "author": author,
         "labels": labels or [],
+        "signal": rationale_signal(f"{title}\n{body}"),
     }
     for key in ws.systems.find(f"{title}\n{body}"):
         ws.rows.mentions.append({"uid": uid, "key": key})

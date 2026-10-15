@@ -105,3 +105,27 @@ def clean_body(text: str | None) -> str:
     if not text:
         return ""
     return _HTML_COMMENT.sub("", text).strip()
+
+
+_RATIONALE = (
+    ("rather than", 3),
+    ("instead of", 2),
+    ("because", 2),
+    ("trade-off", 3),
+    ("tradeoff", 3),
+    ("## why", 3),
+    ("motivation", 3),
+    ("rationale", 3),
+    ("we decided", 2),
+    ("we chose", 2),
+    ("decision", 2),
+    ("alternative", 2),
+    ("considered", 2),
+)
+
+
+def rationale_signal(text: str | None) -> int:
+    """How much a text argues for a choice. Computed in Python at load time so the extraction queue can sort on it
+    (FalkorDB's toLower() rejects some valid emoji, so string functions over raw bodies aren't safe in Cypher)."""
+    low = (text or "").lower()
+    return sum(weight for phrase, weight in _RATIONALE if phrase in low)

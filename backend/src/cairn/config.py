@@ -45,10 +45,19 @@ class Settings(BaseSettings):
     github_token: SecretStr | None = Field(default=None, validation_alias="GITHUB_TOKEN")
     repos: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: [
+            "FalkorDB/FalkorDB",
+            "FalkorDB/falkordb-py",
+            "FalkorDB/falkordb-ts",
+            "FalkorDB/falkordb-go",
+            "FalkorDB/falkordb-rs",
+            "FalkorDB/JFalkorDB",
             "FalkorDB/GraphRAG-SDK",
             "FalkorDB/QueryWeaver",
             "FalkorDB/FalkorDB-MCPServer",
-            "FalkorDB/falkordb-py",
+            "FalkorDB/falkordb-browser",
+            "FalkorDB/code-graph",
+            "FalkorDB/text-to-cypher",
+            "FalkorDB/docs",
         ]
     )
     since: str = "2025-01-01"
