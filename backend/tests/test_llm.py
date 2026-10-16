@@ -198,3 +198,50 @@ async def test_benched_model_comes_back_after_its_reset(tmp_path: Path, monkeypa
     state["capped"] = False
     assert llm.exhausted == set()
     assert (await llm.chat("decide", [{"role": "user", "content": "q2"}])).content == "ok"
+
+
+async def test_per_minute_providers_are_paced(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from cairn.llm import client as llm_client
+
+    llm = LLM(_settings(tmp_path, llm_cache=False))
+    monkeypatch.setitem(llm_client.PROVIDER_RPM, "nvidia", 120)  # one request start every 0.5 s
+    started: list[float] = []
+
+    async def go() -> None:
+        await llm._pace("nvidia")
+        started.append(llm_client.time.monotonic())
+
+    await asyncio.gather(*(go() for _ in range(3)))
+    gaps = [b - a for a, b in zip(sorted(started), sorted(started)[1:], strict=False)]
+    assert all(g >= 0.45 for g in gaps), gaps
+    t0 = llm_client.time.monotonic()
+    await llm._pace("groq")  # providers without a per-minute cap are never delayed
+    assert llm_client.time.monotonic() - t0 < 0.05
+
+
+async def test_excluded_model_never_answers(tmp_path: Path) -> None:
+    from cairn.llm.client import LLMNotConfigured
+
+    llm = LLM(_settings(tmp_path, llm_cache=False, model_decide="groq:judge,groq:checker"))
+    calls: list[str] = []
+
+    def respond(request: dict[str, Any]) -> SimpleNamespace:
+        calls.append(request["model"])
+        return _completion("ok")
+
+    _wire(llm, respond)
+    await llm.chat("decide", [{"role": "user", "content": "q"}], exclude={"groq:judge"})
+    assert calls == ["checker"], "the excluded model is skipped even though it is first in the chain"
+    solo = LLM(_settings(tmp_path, llm_cache=False, model_decide="groq:judge"))
+    _wire(solo, respond)
+    with pytest.raises(LLMNotConfigured):
+        await solo.chat("decide", [{"role": "user", "content": "q"}], exclude={"groq:judge"})
+
+
+def test_same_model_across_providers() -> None:
+    from cairn.llm.client import same_model
+
+    assert same_model("nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b", "openrouter:nvidia/nemotron-3.5-super-vl:free")
+    assert same_model("groq:openai/gpt-oss-120b", "groq:openai/gpt-oss-120b")
+    assert not same_model("groq:openai/gpt-oss-20b", "groq:openai/gpt-oss-120b")
+    assert not same_model("nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b", "groq:openai/gpt-oss-120b")

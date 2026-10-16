@@ -171,7 +171,8 @@ async def check_premise(store: GraphStore, llm: LLM, decider: LLMDecider, premis
         )
         if verdict.answer not in {"contradicts", "supersedes"}:
             continue
-        # Second opinion from the stronger model: it must agree there is a contradiction and quote the evidence.
+        # Second opinion from a *different* model: it must agree there is a contradiction and quote the evidence.
+        # The model that gave the verdict is excluded, so one model can never confirm its own call.
         check = await llm.structured(
             "extract",
             [
@@ -185,6 +186,7 @@ async def check_premise(store: GraphStore, llm: LLM, decider: LLMDecider, premis
             ],
             ChallengeCheck,
             max_tokens=300,
+            exclude={verdict.decided_by},
         )
         if not check.challenges:
             report.rejected += 1

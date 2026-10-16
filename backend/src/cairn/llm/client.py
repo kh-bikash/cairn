@@ -15,6 +15,7 @@ import logging
 import re
 import time
 from collections import defaultdict
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, TypeVar
@@ -126,6 +127,22 @@ class UsageBook:
         return {role: vars(u).copy() for role, u in self.by_role.items()}
 
 
+# Free tiers limited per minute rather than per day: requests are paced to stay under the limit instead of
+# tripping it (a 429 from a sub-second model just wastes the call and, at the end of a chain, the answer).
+PROVIDER_RPM: dict[str, int] = {"nvidia": 36, "openrouter": 18}
+
+
+def same_model(a: str, b: str) -> bool:
+    """Whether two refs are the same model behind different providers: 'nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b'
+    and 'openrouter:nvidia/nemotron-3.5-super-vl:free' are one model, so one must not confirm the other's verdict."""
+
+    def base(ref: str) -> str:
+        return ref.partition(":")[2].rsplit("/", 1)[-1].split(":")[0].lower()
+
+    x, y = base(a), base(b)
+    return bool(x and y) and (x.startswith(y) or y.startswith(x))
+
+
 def parse_model_ref(ref: str) -> tuple[str, str]:
     provider, sep, model = ref.partition(":")
     if not sep or provider not in PROVIDER_BASE_URLS:
@@ -142,6 +159,8 @@ class LLM:
         # Circuit breaker: "provider:model" -> monotonic time when its daily quota is expected back. A long-running
         # server must recover on its own once the quota resets, so models are benched, never banned.
         self._benched: dict[str, float] = {}
+        self._pace_locks: dict[str, asyncio.Lock] = {}
+        self._next_slot: dict[str, float] = {}
         self._cache_dir: Path | None = settings.cache_dir if settings.llm_cache else None
         if self._cache_dir:
             self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -194,8 +213,12 @@ class LLM:
         temperature: float = 0.0,
         max_tokens: int | None = None,
         use_cache: bool = True,
+        exclude: Collection[str] = (),
     ) -> ChatResult:
-        chain = self.model_chain(role)
+        """`exclude` lists "provider:model" refs that must not answer (e.g. the model whose verdict is being checked)."""
+        chain = [(p, m) for p, m in self.model_chain(role) if not any(same_model(f"{p}:{m}", x) for x in exclude)]
+        if not chain:
+            raise LLMNotConfigured(f"no model for role {role!r} besides {', '.join(sorted(exclude))}")
         requests = [(p, m, self._request(p, m, messages, tools, json_mode, temperature, max_tokens)) for p, m in chain]
         cacheable = use_cache and temperature == 0
 
@@ -232,6 +255,8 @@ class LLM:
                         log.warning("%s:%s used its daily quota; skipping it for %.0f min", provider, model, wait / 60)
                         break
                     delay = _retry_delay(exc)
+                    if delay is None and is_last:
+                        delay = 6.0 * (attempt + 1)  # per-minute limit with no Retry-After: nothing to fail over to, so wait
                     if delay is None or delay > _MAX_WAIT_S or attempt == _MAX_ATTEMPTS - 1:
                         log.warning("%s:%s rate limited; trying next model", provider, model)
                         break
@@ -289,9 +314,23 @@ class LLM:
                 request["extra_body"] = {"reasoning": {"enabled": False}}
         return request
 
+    async def _pace(self, provider: str) -> None:
+        """Space request starts so a per-minute limit is never exceeded, across every caller in this process."""
+        rpm = PROVIDER_RPM.get(provider)
+        if not rpm:
+            return
+        lock = self._pace_locks.setdefault(provider, asyncio.Lock())
+        async with lock:
+            now = time.monotonic()
+            slot = max(now, self._next_slot.get(provider, 0.0))
+            self._next_slot[provider] = slot + 60.0 / rpm
+        if slot > now:
+            await asyncio.sleep(slot - now)
+
     async def _call(self, role: Role, provider: str, model: str, client: AsyncOpenAI, request: dict[str, Any]) -> ChatResult:
         started = time.perf_counter()
         async with self._limits[provider]:
+            await self._pace(provider)
             try:
                 resp = await client.chat.completions.create(**request)
             except openai.APIError:
@@ -319,9 +358,9 @@ class LLM:
         self.usage.record(role, result)
         return result
 
-    async def structured(self, role: Role, messages: list[dict[str, Any]], schema: type[T], *, max_tokens: int | None = None) -> T:
+    async def structured(self, role: Role, messages: list[dict[str, Any]], schema: type[T], *, max_tokens: int | None = None, exclude: Collection[str] = ()) -> T:
         """JSON output validated against a Pydantic schema, with one self-repair attempt."""
-        result = await self.chat(role, messages, json_mode=True, max_tokens=max_tokens)
+        result = await self.chat(role, messages, json_mode=True, max_tokens=max_tokens, exclude=exclude)
         try:
             return schema.model_validate(_loads_lenient(result.content))
         except (ValidationError, json.JSONDecodeError) as err:
@@ -334,7 +373,7 @@ class LLM:
                     "content": f"That output was invalid: {str(err)[:800]}\nReturn ONLY corrected JSON matching the schema.",
                 },
             ]
-            fixed = await self.chat(role, repair, json_mode=True, max_tokens=max_tokens)
+            fixed = await self.chat(role, repair, json_mode=True, max_tokens=max_tokens, exclude=exclude)
             return schema.model_validate(_loads_lenient(fixed.content))
 
 
