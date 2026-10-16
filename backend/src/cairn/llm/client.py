@@ -51,7 +51,9 @@ _TRY_AGAIN = re.compile(r"try again in (?:(\d+)h)?(?:(\d+)m)?(?:(\d+(?:\.\d+)?)s
 
 def _is_daily_quota(exc: openai.RateLimitError) -> bool:
     text = str(exc)
-    return "PerDay" in text or "per day" in text.lower() or "RequestsPerDay" in text
+    low = text.lower()
+    # Gemini: "...PerDay...", Groq: "tokens per day (TPD)", Cloudflare: "used up your daily free allocation".
+    return "PerDay" in text or "per day" in low or "daily free allocation" in low or "daily limit" in low
 
 
 def _quota_reset_s(exc: openai.RateLimitError) -> float:
@@ -191,6 +193,10 @@ class LLM:
             base_url = PROVIDER_BASE_URLS[provider]
             if provider == "typesafe" and self.settings.typesafe_base_url:
                 base_url = self.settings.typesafe_base_url
+            if provider == "cloudflare":
+                if not self.settings.cloudflare_account_id:
+                    raise LLMNotConfigured("CLOUDFLARE_ACCOUNT_ID is not set")
+                base_url = base_url.format(account=self.settings.cloudflare_account_id)
             # The SDK retries 408/409/429/5xx with exponential backoff and honours Retry-After.
             self._clients[provider] = AsyncOpenAI(api_key=key, base_url=base_url, max_retries=0, timeout=45.0)  # retries/failover are handled in chat()
             self._limits[provider] = asyncio.Semaphore(self.settings.llm_max_concurrency)
@@ -302,9 +308,12 @@ class LLM:
             request["tools"] = tools
         if json_mode:
             request["response_format"] = {"type": "json_object"}
-        # Gemini "thinking" tokens count against max_tokens and can leave the visible answer empty.
-        if max_tokens and provider != "gemini":
+        # Gemini "thinking" tokens count against max_tokens and can leave the visible answer empty; Cloudflare's
+        # gpt-oss likewise reasons inside the budget, so it gets low reasoning effort and no hard cap instead.
+        if max_tokens and provider not in {"gemini", "cloudflare"}:
             request["max_tokens"] = max_tokens
+        if provider == "cloudflare":
+            request["extra_body"] = {"reasoning_effort": "low"}
         # Nemotron reasons before answering by default, which can spend the whole token budget and leave the answer
         # empty. Cairn needs the answer (tool calls, JSON), so reasoning is switched off: same model, sub-second replies.
         if "nemotron" in model:
@@ -381,8 +390,19 @@ class LLM:
 _SKIP_SIGNATURE = {"google": {"thought_signature": "skip_thought_signature_validator"}}
 
 
+def _flat_text(content: Any) -> str:
+    if content is None:
+        return ""
+    if isinstance(content, list):
+        return "".join(part.get("text", "") if isinstance(part, dict) else str(part) for part in content)
+    return str(content)
+
+
 def _adapt_messages(provider: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Gemini requires a thought signature on every prior function call; other providers reject the field."""
+    """Gemini requires a thought signature on every prior function call; other providers reject the field.
+    Cloudflare's schema wants every message content to be a plain string (no null, no content-part lists)."""
+    if provider == "cloudflare":
+        messages = [{**m, "content": _flat_text(m.get("content"))} for m in messages]
     if not any(m.get("tool_calls") for m in messages):
         return messages
     out = []

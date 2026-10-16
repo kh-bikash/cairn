@@ -205,3 +205,19 @@ def test_decisions_with_different_numbers_are_not_merged() -> None:
     assert numbers_conflict("Use Redis with 24h TTL for webhook idempotency", "Extend idempotency key TTL to 7 days")
     assert not numbers_conflict("Move the events pipeline to Amazon MSK", "Adopt AWS MSK for Kafka")
     assert not numbers_conflict("Adopt RFC-0007 OR-Tools", "Replace the greedy heuristic with OR-Tools"), "one side without numbers"
+
+
+def test_citation_ranges_with_any_dash_are_expanded() -> None:
+    ledger = Ledger()
+    for i in range(1, 5):
+        ledger.add(Evidence(f"s{i}", f"t{i}", None, "pr", 0))
+    text, cites = clean_citations("Gal leads ingestion [1‑3] and Naseem helps [4].", ledger)
+    assert text == "Gal leads ingestion [1][2][3] and Naseem helps [4]."
+    assert [c["ref"] for c in cites] == [1, 2, 3, 4]
+
+
+def test_lenticular_bracket_citations_are_recognised() -> None:
+    ledger = Ledger()
+    ledger.add(Evidence("s1", "t1", None, "pr", 0))
+    text, cites = clean_citations("Gal knows ingestion【1】.", ledger)
+    assert text == "Gal knows ingestion[1]." and [c["ref"] for c in cites] == [1]

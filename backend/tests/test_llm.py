@@ -245,3 +245,28 @@ def test_same_model_across_providers() -> None:
     assert same_model("groq:openai/gpt-oss-120b", "groq:openai/gpt-oss-120b")
     assert not same_model("groq:openai/gpt-oss-20b", "groq:openai/gpt-oss-120b")
     assert not same_model("nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b", "groq:openai/gpt-oss-120b")
+
+
+def test_cloudflare_endpoint_and_daily_allocation(tmp_path: Path) -> None:
+    import httpx2
+    import openai
+
+    from cairn.llm.client import _is_daily_quota
+
+    llm = LLM(_settings(tmp_path, cloudflare_api_key="t", cloudflare_account_id="acc123"))
+    assert str(llm._client("cloudflare").base_url).rstrip("/").endswith("/accounts/acc123/ai/v1")
+    response = httpx2.Response(429, request=httpx2.Request("POST", "https://example.invalid"))
+    used_up = openai.RateLimitError("4006: you have used up your daily free allocation of 10,000 neurons", response=response, body=None)
+    per_minute = openai.RateLimitError("Rate limit reached: 30 requests per minute", response=response, body=None)
+    assert _is_daily_quota(used_up) and not _is_daily_quota(per_minute)
+
+
+def test_cloudflare_requests_are_adapted() -> None:
+    from cairn.llm.client import LLM as _LLM
+    from cairn.llm.client import _adapt_messages
+
+    msgs = [{"role": "system", "content": [{"type": "text", "text": "be brief"}]}, {"role": "assistant", "content": None, "tool_calls": []}]
+    adapted = _adapt_messages("cloudflare", msgs)
+    assert [m["content"] for m in adapted] == ["be brief", ""]
+    req = _LLM._request("cloudflare", "@cf/openai/gpt-oss-120b", [], None, True, 0.0, 60)
+    assert "max_tokens" not in req and req["extra_body"] == {"reasoning_effort": "low"}

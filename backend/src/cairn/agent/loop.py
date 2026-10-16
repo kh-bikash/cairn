@@ -36,7 +36,12 @@ from cairn.llm.client import LLM, LLMNotConfigured
 
 log = logging.getLogger(__name__)
 
-_CITE = re.compile(r"\[\s*(\d+(?:\.\d+)?(?:\s*,\s*\d+(?:\.\d+)?)*)\s*\]")
+_DASHES = "-‐‑‒–—"  # models write ranges with any of these: [1-3], [1‑3], [1–3]
+_ITEM = rf"\d+(?:\.\d+)?(?:\s*[{_DASHES}]\s*\d+)?"
+_CITE = re.compile(rf"\[\s*({_ITEM}(?:\s*,\s*{_ITEM})*)\s*\]")
+# gpt-oss cites with lenticular brackets (【1】); some models use full-width ones (［1］).
+_BRACKETS = str.maketrans({"【": "[", "】": "]", "［": "[", "］": "]"})
+_RANGE = re.compile(rf"^(\d+)\s*[{_DASHES}]\s*(\d+)$")
 _MAX_TOOL_CHARS = 9_000
 
 SYSTEM_PROMPT = """You are Cairn, a company brain for an engineering organisation. You answer questions about
@@ -111,14 +116,21 @@ def clean_citations(text: str, ledger: Ledger) -> tuple[str, list[dict[str, Any]
 
     def repl(m: re.Match[str]) -> str:
         kept = []
+        refs: list[str] = []
         for part in m.group(1).split(","):
             part = part.strip()
+            span = _RANGE.match(part)
+            if span and int(span.group(1)) <= int(span.group(2)) <= int(span.group(1)) + 10:
+                refs += [str(n) for n in range(int(span.group(1)), int(span.group(2)) + 1)]  # "[1-3]" -> [1][2][3]
+            else:
+                refs.append(part)
+        for part in refs:
             if part.isdigit() and int(part) in valid:  # "[10.67]" or unknown numbers are dropped, never shown
                 cited.setdefault(int(part), valid[int(part)])
                 kept.append(f"[{int(part)}]")
         return "".join(kept)
 
-    cleaned = _CITE.sub(repl, text)
+    cleaned = _CITE.sub(repl, text.translate(_BRACKETS))
     cleaned = re.sub(r"[ \t]+([.,;:])", r"\1", cleaned)
     citations = [
         {"ref": r, "uid": e["uid"], "title": e["title"], "url": e["url"], "kind": e["kind"], "date": e["date"], "quote": e.get("quote")}
@@ -223,6 +235,8 @@ class Agent:
             final_step = step == self.settings.agent_max_steps - 1
             result = await self.llm.chat("agent", messages, tools=None if final_step else TOOL_SPECS + ACTION_SPECS, use_cache=False)
             if not result.tool_calls:
+                if not (result.content or "").strip():
+                    break  # an empty answer is no answer: fall through to the graph router below
                 yield await self._finish(question, result.content, ledger, used, mode="agent")
                 return
             messages.append(result.message())

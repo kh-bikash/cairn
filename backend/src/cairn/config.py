@@ -9,7 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # backend/src/cairn/config.py -> repo root is three levels above the package.
@@ -25,6 +25,8 @@ PROVIDER_BASE_URLS: dict[str, str] = {
     # Free, rate-limited (~40 req/min) but with no daily cap: the fallback that keeps answers flowing.
     "nvidia": "https://integrate.api.nvidia.com/v1",
     "openrouter": "https://openrouter.ai/api/v1",
+    # Workers AI: the account id is part of the URL ({account} is filled from CLOUDFLARE_ACCOUNT_ID).
+    "cloudflare": "https://api.cloudflare.com/client/v4/accounts/{account}/ai/v1",
     # Unverified until we have console access; override with CAIRN_TYPESAFE_BASE_URL.
     "typesafe": "https://api.typesafe.ai/v1",
 }
@@ -75,6 +77,8 @@ class Settings(BaseSettings):
     typesafe_api_key: SecretStr | None = Field(default=None, validation_alias="TYPESAFE_API_KEY")
     nvidia_api_key: SecretStr | None = Field(default=None, validation_alias="NVIDIA_API_KEY")
     openrouter_api_key: SecretStr | None = Field(default=None, validation_alias="OPENROUTER_API_KEY")
+    cloudflare_api_key: SecretStr | None = Field(default=None, validation_alias=AliasChoices("CLOUDFLARE_API_KEY", "CLOUDFLARE_API_TOKEN"))
+    cloudflare_account_id: str | None = Field(default=None, validation_alias="CLOUDFLARE_ACCOUNT_ID")
 
     # Model roles, each "provider:model".
     # Defaults match .env.example and the demo snapshot: the cache is keyed by model, so a keyless replay only
@@ -83,6 +87,7 @@ class Settings(BaseSettings):
         [
             "groq:openai/gpt-oss-20b",
             "groq:openai/gpt-oss-120b",
+            "cloudflare:@cf/openai/gpt-oss-120b",
             "nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b",
             "groq:qwen/qwen3.8-27b",
             "gemini:gemini-2.5-flash-lite",
@@ -92,6 +97,7 @@ class Settings(BaseSettings):
     model_extract: str = ",".join(
         [
             "groq:openai/gpt-oss-120b",
+            "cloudflare:@cf/openai/gpt-oss-120b",
             "nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b",
             "groq:qwen/qwen3.8-27b",
             "gemini:gemini-3.5-flash",
@@ -102,6 +108,7 @@ class Settings(BaseSettings):
     model_agent: str = ",".join(
         [
             "groq:openai/gpt-oss-120b",
+            "cloudflare:@cf/openai/gpt-oss-120b",
             "nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b",
             "groq:qwen/qwen3.8-27b",
             "gemini:gemini-2.5-flash",
