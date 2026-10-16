@@ -262,3 +262,28 @@ def test_bridge_people_from_collaboration(tmp_path: Path) -> None:
         assert [b["handle"] for b in bridges] == ["y"], bridges
     finally:
         s.drop()
+
+
+async def test_agent_that_never_stops_searching_falls_back_to_the_router(store: GraphStore, tmp_path: Path) -> None:
+    from cairn.llm.client import ChatResult
+
+    class _Searcher:
+        """A model that calls a tool on every turn and never writes an answer."""
+
+        usage = LLM(_settings(tmp_path)).usage
+
+        def available(self, role: str) -> bool:
+            return True
+
+        async def chat(self, role: str, messages: list[dict[str, Any]], **_: Any) -> ChatResult:
+            call = {"id": f"c{len(messages)}", "name": "search", "arguments": '{"query": "MongoDB ledger"}'}
+            return ChatResult(content="", tool_calls=[call], model="fake", cached=False, latency_ms=0)
+
+    settings = _settings(tmp_path)
+    agent = Agent(store, _Searcher(), settings)  # type: ignore[arg-type]
+    agent.persist_answers = False
+    events = [e async for e in agent.run("Why did we choose Redis for the session cache?")]
+    answer = next(e for e in events if e["type"] == "answer")
+    assert answer["mode"] == "router"
+    assert "ran out" not in answer["text"]
+    assert "Use Redis for the session cache" in answer["text"]

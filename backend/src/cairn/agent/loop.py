@@ -236,7 +236,11 @@ class Agent:
                 event, content, _ = await self._run_tool(call_id, tc["name"], args, ledger, used)
                 yield event
                 messages.append({"role": "tool", "tool_call_id": call_id, "content": content})
-        yield await self._finish(question, "I ran out of reasoning steps before reaching an answer.", ledger, used, mode="agent")
+        # The model kept searching instead of answering (common on questions with no recorded answer). Rather than
+        # admit defeat, answer from the graph router over the evidence already gathered: it declines honestly.
+        log.info("agent used all %d steps without answering; using the graph router", self.settings.agent_max_steps)
+        async for event in self._router_answer(question, ledger, used):
+            yield event
 
     async def _run_tool(self, call_id: str, name: str, args: dict[str, Any], ledger: Ledger, used: SubGraph) -> tuple[dict[str, Any], str, ToolResult | None]:
         try:

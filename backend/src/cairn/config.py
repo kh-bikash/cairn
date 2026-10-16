@@ -22,6 +22,9 @@ PROVIDER_BASE_URLS: dict[str, str] = {
     "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/",
     "openai": "https://api.openai.com/v1",
     "anthropic": "https://api.anthropic.com/v1/",
+    # Free, rate-limited (~40 req/min) but with no daily cap: the fallback that keeps answers flowing.
+    "nvidia": "https://integrate.api.nvidia.com/v1",
+    "openrouter": "https://openrouter.ai/api/v1",
     # Unverified until we have console access; override with CAIRN_TYPESAFE_BASE_URL.
     "typesafe": "https://api.typesafe.ai/v1",
 }
@@ -70,13 +73,42 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     anthropic_api_key: SecretStr | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     typesafe_api_key: SecretStr | None = Field(default=None, validation_alias="TYPESAFE_API_KEY")
+    nvidia_api_key: SecretStr | None = Field(default=None, validation_alias="NVIDIA_API_KEY")
+    openrouter_api_key: SecretStr | None = Field(default=None, validation_alias="OPENROUTER_API_KEY")
 
     # Model roles, each "provider:model".
     # Defaults match .env.example and the demo snapshot: the cache is keyed by model, so a keyless replay only
     # finds responses for the models that produced them.
-    model_decide: str = "groq:openai/gpt-oss-20b,groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b,gemini:gemini-2.5-flash-lite"
-    model_extract: str = "groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b,gemini:gemini-3.5-flash,gemini:gemini-2.5-flash"
-    model_agent: str = "groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b,gemini:gemini-2.5-flash,gemini:gemini-3.8-flash"
+    model_decide: str = ",".join(
+        [
+            "groq:openai/gpt-oss-20b",
+            "groq:openai/gpt-oss-120b",
+            "nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b",
+            "groq:qwen/qwen3.8-27b",
+            "gemini:gemini-2.5-flash-lite",
+            "openrouter:nvidia/nemotron-3.5-super-vl:free",
+        ]
+    )
+    model_extract: str = ",".join(
+        [
+            "groq:openai/gpt-oss-120b",
+            "nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b",
+            "groq:qwen/qwen3.8-27b",
+            "gemini:gemini-3.5-flash",
+            "gemini:gemini-2.5-flash",
+            "openrouter:nvidia/nemotron-3.5-super-vl:free",
+        ]
+    )
+    model_agent: str = ",".join(
+        [
+            "groq:openai/gpt-oss-120b",
+            "nvidia:nvidia/nemotron-3.5-super-vl-120b-a12b",
+            "groq:qwen/qwen3.8-27b",
+            "gemini:gemini-2.5-flash",
+            "gemini:gemini-3.8-flash",
+            "openrouter:nvidia/nemotron-3.5-super-vl:free",
+        ]
+    )
     typesafe_base_url: str | None = None
     llm_cache: bool = True
     llm_max_concurrency: int = 4

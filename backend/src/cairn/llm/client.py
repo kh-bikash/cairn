@@ -280,6 +280,13 @@ class LLM:
         # Gemini "thinking" tokens count against max_tokens and can leave the visible answer empty.
         if max_tokens and provider != "gemini":
             request["max_tokens"] = max_tokens
+        # Nemotron reasons before answering by default, which can spend the whole token budget and leave the answer
+        # empty. Cairn needs the answer (tool calls, JSON), so reasoning is switched off: same model, sub-second replies.
+        if "nemotron" in model:
+            if provider == "nvidia":
+                request["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
+            elif provider == "openrouter":
+                request["extra_body"] = {"reasoning": {"enabled": False}}
         return request
 
     async def _call(self, role: Role, provider: str, model: str, client: AsyncOpenAI, request: dict[str, Any]) -> ChatResult:
