@@ -122,7 +122,8 @@ def change_impact(tools: Tools, system: str, change: str = "") -> ToolResult:
         "notify": notify,
         "draft": "\n".join(lines),
     }
-    return ToolResult(data, f"{_n(len(dependents), 'dependent')}, {_n(len(constraints), 'constraining decision')}, {_n(len(notify), 'group')} to notify", sg, evidence)
+    summary = f"{_n(len(dependents), 'dependent')}, {_n(len(constraints), 'constraining decision')}, {_n(len(notify), 'group')} to notify"
+    return ToolResult(data, summary, sg, evidence)
 
 
 # --------------------------------------------------------------------------- incident memory
