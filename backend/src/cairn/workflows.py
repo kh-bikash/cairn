@@ -60,6 +60,10 @@ def _name(key: str) -> str:
 # --------------------------------------------------------------------------- change impact
 
 
+def _n(count: int, noun: str) -> str:
+    return f"{count} {noun}{'' if count == 1 else 's'}"
+
+
 def change_impact(tools: Tools, system: str, change: str = "") -> ToolResult:
     impact = tools.impact(system)
     target = impact.data["system"]
@@ -118,7 +122,7 @@ def change_impact(tools: Tools, system: str, change: str = "") -> ToolResult:
         "notify": notify,
         "draft": "\n".join(lines),
     }
-    return ToolResult(data, f"{len(dependents)} dependents, {len(constraints)} constraining decisions, {len(notify)} groups to notify", sg, evidence)
+    return ToolResult(data, f"{_n(len(dependents), 'dependent')}, {_n(len(constraints), 'constraining decision')}, {_n(len(notify), 'group')} to notify", sg, evidence)
 
 
 # --------------------------------------------------------------------------- incident memory
@@ -240,7 +244,7 @@ def incident_memory(tools: Tools, description: str, limit: int = 5) -> ToolResul
         "who_to_page": available[:4],
         "note": None if out else "No similar past incident found in the graph.",
     }
-    return ToolResult(data, f"{len(out)} similar incidents, {len(runbooks)} runbooks", sg, evidence)
+    return ToolResult(data, f"{_n(len(out), 'similar incident')}, {_n(len(runbooks), 'runbook')}", sg, evidence)
 
 
 def _resolution(body: str) -> str | None:
@@ -313,4 +317,4 @@ def handoff_plan(tools: Tools, handle: str) -> ToolResult:
         "open_work": profile.data["open_work"],
         "draft": "\n".join(lines),
     }
-    return ToolResult(data, f"handoff for {person['handle']}: {len(areas)} areas", sg, evidence)
+    return ToolResult(data, f"handoff for {person['handle']}: {_n(len(areas), 'area')}", sg, evidence)
