@@ -429,17 +429,15 @@ def sample_orbiton(out: Annotated[str, typer.Option()] = "../workspaces/orbiton"
 
 @app.command("eval")
 def eval_cmd(
-    systems: Annotated[str, typer.Option(help="Comma-separated: cairn,rag,router")] = "cairn,rag,router",
+    systems: Annotated[str, typer.Option(help="Comma-separated: cairn,router,vector,rag")] = "cairn,router,vector,rag",
     questions: Annotated[str, typer.Option()] = "../eval/questions.jsonl",
     out: Annotated[str, typer.Option()] = "../eval",
     only: Annotated[str | None, typer.Option(help="Comma-separated question ids")] = None,
+    judge: Annotated[str, typer.Option(help="provider:model that grades answers against the ground truth; empty to skip")] = ("cloudflare:@cf/openai/gpt-oss-120b"),
 ) -> None:
-    """Score Cairn against a plain-RAG baseline and graph-only routing on questions with known answers."""
-    from pathlib import Path
-
+    """Score Cairn against dense and keyword RAG baselines and graph-only routing on questions with known answers."""
     from cairn.evaluation import load_questions, run_eval, write_results
-    from cairn.graph.client import GraphStore
-    from cairn.llm.client import LLM
+    from cairn.llm.client import LLM, same_model
 
     s = get_settings()
     qs = load_questions(Path(questions))
@@ -447,8 +445,15 @@ def eval_cmd(
         wanted = set(only.split(","))
         qs = [q for q in qs if q.id in wanted]
     llm = LLM(s)
-    scores = asyncio.run(run_eval(GraphStore(s), llm, s, qs, [x.strip() for x in systems.split(",") if x.strip()]))
-    md = write_results(scores, qs, Path(out))
+    model = s.model_agent.split(",")[0].strip()
+    judge_llm = None
+    if judge:
+        if same_model(judge, model):
+            console.print(f"[yellow]the judge {judge} is the answering model; pick a different one for an independent grade[/]")
+        judge_llm = LLM(s.model_copy(update={"model_extract": judge}))
+    picked = [x.strip() for x in systems.split(",") if x.strip()]
+    scores = asyncio.run(run_eval(s, llm, qs, picked, judge_llm=judge_llm))
+    md = write_results(scores, qs, Path(out), model=model, judge_model=judge)
     console.print(md.read_text(encoding="utf-8"), markup=False)
     console.print_json(json.dumps(llm.usage.snapshot()))
 

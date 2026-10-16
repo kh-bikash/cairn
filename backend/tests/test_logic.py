@@ -221,3 +221,17 @@ def test_lenticular_bracket_citations_are_recognised() -> None:
     ledger.add(Evidence("s1", "t1", None, "pr", 0))
     text, cites = clean_citations("Gal knows ingestion【1】.", ledger)
     assert text == "Gal knows ingestion[1]." and [c["ref"] for c in cites] == [1]
+
+
+def test_eval_scores_replies_as_their_thread_and_reports_judged() -> None:
+    from cairn.evaluation import Question, report_markdown, score
+
+    q = Question("q1", "incident", "Has this happened before?", {"any_uids": ["ticket:PAY-341"], "all_terms": ["TTL"]}, "PAY-341", "cairn_orbiton")
+    s = score(q, "cairn", "Yes: the TTL had expired.", ["ticket:PAY-341/c1"], 1.0)
+    assert s.passed and s.workspace == "cairn_orbiton"
+    s.judged = True
+    other = score(q, "rag", "I don't know.", [], 1.0)
+    other.judged = False
+    md = report_markdown([s, other], [q], model="nvidia:x", judge_model="cloudflare:y")
+    assert "| **cairn** | **1/1** | **1/1** |" in md and "| **rag** | **0/1** | **0/1** |" in md
+    assert "✅ / ✅" in md and "❌ / ❌" in md
