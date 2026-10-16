@@ -396,27 +396,35 @@ so community detection and betweenness run on this projection instead.
 
 ## Evaluation
 
-[`eval/questions.jsonl`](eval/questions.jsonl) holds questions whose answers were written from the raw data,
-not from Cairn's output. They cover why, who, impact, history, multi-hop and risk, plus trick questions with
-false premises that must be declined.
+[`eval/questions.jsonl`](eval/questions.jsonl) holds 40 questions: 25 on the FalkorDB repositories and 15 on Orbiton.
+Each answer was written from the raw data (PR text, file lists, package manifests; the Orbiton Slack, Jira and doc
+exports), not from Cairn's output. They cover why, who, impact, history, incidents, drift, multi-hop and risk, plus
+false-premise questions that must be declined.
 
 ```bash
-cd backend && uv run cairn eval --systems cairn,rag,router   # writes eval/results.md
+cd backend && uv run cairn eval            # all four systems + judge; writes eval/results.md
+uv run cairn eval --rejudge                # re-grade stored answers after fixing a reference
 ```
 
-It compares **cairn** (graph agent), **rag** (keyword retrieval over the same documents plus one call to the
-same model) and **router** (Cairn's graph routing with no AI at all). Latest run, with NVIDIA Nemotron 3.5 Super as
-the model for both cairn and rag:
+Four systems, the same model (NVIDIA Nemotron 3.5 Super) wherever a model is used:
 
-| System | Passed | why | who | impact | risk | multi-hop | history | false premise |
-|---|---|---|---|---|---|---|---|---|
-| **cairn** (graph agent) | **21/25** | 9/12 | 4/4 | 2/2 | 2/2 | 1/2 | 1/1 | 2/2 |
-| **router** (graph, no AI) | 20/25 | 9/12 | 4/4 | 2/2 | 2/2 | 0/2 | 1/1 | 2/2 |
-| **rag** (same model, same documents) | 4/25 | 1/12 | 1/4 | 0/2 | 0/2 | 0/2 | 0/1 | 2/2 |
+| System | Strict | Judged | why | who | impact | history | risk | multi-hop | false premise |
+|---|---|---|---|---|---|---|---|---|---|
+| **cairn**: graph agent | **34/40** | **31/40** | 14/17 | 5/5 | 3/3 | 2/2 | 3/3 | 1/4 | 4/4 |
+| **router**: graph only, no AI | 32/40 | 26/40 | 14/17 | 5/5 | 3/3 | 2/2 | 3/3 | 0/4 | 4/4 |
+| **vector**: dense RAG, FalkorDB vector index | 22/40 | 19/40 | 14/17 | 0/5 | 0/3 | 0/2 | 1/3 | 1/4 | 4/4 |
+| **rag**: keyword RAG | 9/40 | 5/40 | 3/17 | 1/5 | 0/3 | 0/2 | 0/3 | 1/4 | 4/4 |
 
-The graph does the heavy lifting: with no AI at all it answers 20 of 25, while the same model over the same
-documents without the graph answers 4. "Who knows X" and "what breaks" have no single passage to retrieve; they are
-aggregates over relationships. Per-question results: [`eval/results.md`](eval/results.md).
+**Strict** is automatic: the right source cited, at least half the key facts present, the right people named, false
+premises declined. **Judged** is a different model (GPT-OSS-120B on Cloudflare) comparing each answer with the written
+ground truth. The vector baseline embeds every source in 1,500-character chunks with NVIDIA `nemotron-3-embed-1b` and
+retrieves from a FalkorDB vector index; both RAG baselines get the same prompt and model.
+
+What it shows: good vector retrieval ties Cairn on "why" questions, because the answer usually sits in one paragraph.
+On who knows what, what breaks, history and knowledge risk, the answer is an aggregate over relationships with no
+paragraph to retrieve, and vector RAG scores close to zero while the graph, even with no AI at all, answers them.
+Where Cairn still misses: multi-hop questions that chain several facts (1/4), and two "who" answers where its
+recency-weighted expertise disagrees with raw PR counts. Per-question results: [`eval/results.md`](eval/results.md).
 
 ## Use it from your AI tools (MCP)
 
