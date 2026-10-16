@@ -114,7 +114,8 @@ LIMIT $limit
 
 _LATER = """
 CALL db.idx.fulltext.queryNodes('Source', $q) YIELD node, score
-WHERE node.repo = $repo AND node.ts > $ts AND NOT (node)<-[:EVIDENCED_BY]-(:Premise {uid: $premise})
+// Repository docs carry the date they were fetched, not written, so they are never "later" evidence.
+WHERE node.repo = $repo AND node.ts > $ts AND node.kind <> 'doc' AND NOT (node)<-[:EVIDENCED_BY]-(:Premise {uid: $premise})
 RETURN node.uid AS uid, node.title AS title, node.body AS body, node.ts AS ts, node.url AS url, score
 ORDER BY score DESC
 LIMIT $k
@@ -159,7 +160,8 @@ async def _second_opinion(llm: LLM, premise: dict[str, Any], later: str, decided
             {
                 "role": "system",
                 "content": "Decide whether the LATER TEXT shows that the PREMISE is false or no longer holds. Be strict: "
-                "mentioning the same topic, praising, or adding detail is NOT a challenge. If it is a challenge, copy the single "
+                "mentioning the same topic, praising, or adding detail is NOT a challenge, and neither is evidence that the decision "
+                "was carried out when the premise describes the earlier situation. If it is a challenge, copy the single "
                 'sentence that shows it, verbatim. Return JSON: {"challenges": bool, "quote": str, "explanation": str (one sentence)}.',
             },
             {"role": "user", "content": f"PREMISE: {premise['text']}\n\nLATER TEXT:\n{later}"},
@@ -176,16 +178,25 @@ async def check_premise(store: GraphStore, llm: LLM, decider: LLMDecider, premis
     if query:
         candidates = store.records(_LATER, {"q": query, "repo": premise["repo"], "ts": premise["ts"] or 0, "premise": premise["uid"], "k": _CANDIDATES_PER_PREMISE})
     premise_terms = _stems(premise["text"])
+    decision_terms = _stems(premise["title"])
     for cand in candidates:
         later = f"{cand['title']}\n{(cand['body'] or '')[:2_500]}"
         # Cheap relevance gate before any LLM call: short chatter or text sharing <2 topic words can't challenge it.
         if len((cand["body"] or "").strip()) < 40 or len(premise_terms & _stems(later)) < 2:
             report.filtered += 1
             continue
+        # A later source whose title restates the decision ("stop caching description vectors") is the decision being
+        # carried out, which always "contradicts" a premise describing the old state. It is not new evidence.
+        title_terms = _stems(cand["title"] or "")
+        if decision_terms and len(decision_terms & title_terms) / len(decision_terms | title_terms) >= 0.5:
+            report.filtered += 1
+            continue
         report.pairs_checked += 1
         verdict = await decider.decide(
             "Compared with the PREMISE, what does the LATER text do? 'contradicts' = shows the premise is no longer true; "
-            "'supersedes' = replaces the decision that relied on it; 'supports' = confirms it; 'unrelated' otherwise.",
+            "'supersedes' = replaces the decision that relied on it; 'supports' = confirms it; 'unrelated' otherwise. "
+            "A premise that describes the situation before the decision ('X was not tracked', 'we used to') is not "
+            "contradicted by later text showing the decision was carried out: that is 'supports'.",
             f"PREMISE (behind decision '{premise['title']}'): {premise['text']}\n\nLATER TEXT:\n{later}",
             ["contradicts", "supersedes", "supports", "unrelated"],
         )

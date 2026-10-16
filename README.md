@@ -208,6 +208,11 @@ flowchart LR
     Q -->|yes| W["CHALLENGES edge with the quote;<br/>decision marked as drifted"]
 ```
 
+**Drift is built to under-claim.** Beyond two models agreeing on a verified quote, a later source that merely
+carries out the decision (its title restates it) is not evidence against it, and repository docs, whose dates are
+the day they were fetched, are never treated as later evidence. On the FalkorDB data this leaves one challenged
+decision worth a human look; on Orbiton, the decisions an outage and a performance postmortem undermined.
+
 **Writes need a human.** The agent can only *propose* actions. Each is stored as a pending `(:Action)` with a
 full preview; nothing reaches GitHub until someone approves it in the UI or CLI, and writes are refused outside
 `CAIRN_ACTION_REPOS`. Published text never @-mentions anyone, and links to other repos go through
@@ -400,7 +405,18 @@ cd backend && uv run cairn eval --systems cairn,rag,router   # writes eval/resul
 ```
 
 It compares **cairn** (graph agent), **rag** (keyword retrieval over the same documents plus one call to the
-same model) and **router** (Cairn's graph routing with no AI at all). Results: [`eval/results.md`](eval/results.md).
+same model) and **router** (Cairn's graph routing with no AI at all). Latest run, with NVIDIA Nemotron 3.5 Super as
+the model for both cairn and rag:
+
+| System | Passed | why | who | impact | risk | multi-hop | history | false premise |
+|---|---|---|---|---|---|---|---|---|
+| **cairn** (graph agent) | **21/25** | 9/12 | 4/4 | 2/2 | 2/2 | 1/2 | 1/1 | 2/2 |
+| **router** (graph, no AI) | 20/25 | 9/12 | 4/4 | 2/2 | 2/2 | 0/2 | 1/1 | 2/2 |
+| **rag** (same model, same documents) | 4/25 | 1/12 | 1/4 | 0/2 | 0/2 | 0/2 | 0/1 | 2/2 |
+
+The graph does the heavy lifting: with no AI at all it answers 20 of 25, while the same model over the same
+documents without the graph answers 4. "Who knows X" and "what breaks" have no single passage to retrieve; they are
+aggregates over relationships. Per-question results: [`eval/results.md`](eval/results.md).
 
 ## Use it from your AI tools (MCP)
 
@@ -466,15 +482,19 @@ Quality gates: `uv run pytest` (unit + FalkorDB integration; set `CAIRN_FALKORDB
 ### Models (free tiers are enough)
 
 Every AI role is a comma-separated fallback chain of `provider:model` refs over OpenAI-compatible endpoints
-(`groq`, `gemini`, `openai`, `anthropic`, `typesafe`). If a model is overloaded or returns invalid JSON, Cairn
-moves to the next one; if it reports its daily quota is used up, Cairn benches it until the quota resets.
+(`groq`, `cloudflare`, `nvidia`, `gemini`, `openrouter`, `openai`, `anthropic`, `typesafe`). If a model is overloaded
+or returns invalid JSON, Cairn moves to the next one; if it reports its daily quota is used up, Cairn benches it until
+the quota resets. Free tiers limited per minute (NVIDIA, OpenRouter) are paced so they are never tripped.
 Responses at temperature 0 are cached under `data/llm-cache`, so re-runs cost nothing and snapshots replay offline.
 
 | Role | Used for | Default |
 |---|---|---|
-| `CAIRN_MODEL_DECIDE` | bounded choices: triage, drift verdicts (the slot for TypeSafe JEV) | Groq `gpt-oss-20b` → `gpt-oss-120b` → Gemini |
-| `CAIRN_MODEL_EXTRACT` | decision extraction, second opinion on drift | Groq `gpt-oss-120b` → Qwen → Gemini |
-| `CAIRN_MODEL_AGENT` | tool-calling agent and final answers | Groq `gpt-oss-120b` → Qwen → Gemini |
+| `CAIRN_MODEL_DECIDE` | bounded choices: triage, drift verdicts (the slot for TypeSafe JEV) | Groq `gpt-oss-20b` → `gpt-oss-120b` → Cloudflare `gpt-oss-120b` → NVIDIA Nemotron → … |
+| `CAIRN_MODEL_EXTRACT` | decision extraction, second opinion on drift | Groq `gpt-oss-120b` → Cloudflare `gpt-oss-120b` → NVIDIA Nemotron → Qwen → Gemini → OpenRouter |
+| `CAIRN_MODEL_AGENT` | tool-calling agent and final answers | Groq `gpt-oss-120b` → Cloudflare `gpt-oss-120b` → NVIDIA Nemotron → Qwen → Gemini → OpenRouter |
+
+When Groq's daily quota runs out, answers continue on the same model through Cloudflare, then on NVIDIA Nemotron,
+which has no daily cap. Drift's second opinion always comes from a different model than the verdict it checks.
 
 ### FalkorDB notes
 
