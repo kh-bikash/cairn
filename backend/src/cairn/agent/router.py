@@ -360,10 +360,12 @@ def _cite(ledger: Ledger, uid: str | None) -> str:
 def _render_why(r: ToolResult, ledger: Ledger) -> str:
     decisions = r.data.get("decisions") or []
     if not decisions:
+        if r.data.get("no_record_of"):
+            return str(r.data["note"])
         srcs = r.data.get("sources") or []
         if not srcs:
             return "I found no recorded decision or discussion on that topic."
-        lines = ["No extracted decision matches, but these threads discuss it:"]
+        lines = ["I found no recorded decision explaining this, and nothing confirms it happened. The closest related threads:"]
         lines += [f"- {s['title']} ({s['kind']}, {s.get('date')}){_cite(ledger, s['uid'])}" for s in srcs[:5]]
         return "\n".join(lines)
     out = []

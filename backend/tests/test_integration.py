@@ -305,3 +305,13 @@ async def test_agent_that_never_stops_searching_falls_back_to_the_router(store: 
     assert answer["mode"] == "router"
     assert "ran out" not in answer["text"]
     assert "Use Redis for the session cache" in answer["text"]
+
+
+def test_why_says_plainly_when_nothing_mentions_the_named_thing(store: GraphStore) -> None:
+    from cairn.agent.loop import Ledger
+    from cairn.agent.router import RENDERERS
+
+    result = Tools(store).why("Why did we move the session cache to Cassandra?")
+    assert result.data["decisions"] == [] and result.data["no_record_of"] == ["Cassandra"]
+    assert "Nothing in the data mentions Cassandra" in RENDERERS["why"](result, Ledger())
+    assert Tools(store).why("Redis session cache").data["decisions"], "a topic the data does cover still gets its decision"

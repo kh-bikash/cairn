@@ -282,9 +282,10 @@ Question: {question}
 Reference answer: {truth}
 Candidate answer: {answer}
 
-Is the candidate answer correct? It does not need every detail of the reference, but its main point must agree with
-the reference and it must not state anything that contradicts it. If the reference says the question has a false
-premise, the candidate is correct only if it declines or corrects the premise; inventing a reason is incorrect.
+Is the candidate answer correct? Judge its main point against the reference. It does not need every detail of the
+reference, and extra details beyond the reference are fine: do not count them against it unless they directly
+contradict the reference. If the reference says the question has a false premise, the candidate is correct if it
+declines (says no such decision, record or discussion exists) or corrects the premise; inventing a reason is incorrect.
 "I don't know" is incorrect unless the reference says the premise is false.
 Return JSON: {{"correct": bool, "reason": str (one sentence)}}."""
 
@@ -299,6 +300,23 @@ async def judge(judge_llm: LLM, q: Question, answer: str) -> tuple[bool, str]:
         max_tokens=200,
     )
     return verdict.correct, verdict.reason[:300]
+
+
+async def rejudge(scores: list[Score], questions: list[Question], judge_llm: LLM) -> list[Score]:
+    """Grade stored answers again (after fixing a reference or the judge prompt) without re-asking the questions."""
+    by_id = {q.id: q for q in questions}
+    for s in scores:
+        if s.error is None and s.id in by_id:
+            try:
+                s.judged, s.judge_reason = await judge(judge_llm, by_id[s.id], s.answer)
+            except Exception as exc:  # noqa: BLE001 - keep the strict score
+                s.judged, s.judge_reason = None, f"judge failed: {type(exc).__name__}"
+    return scores
+
+
+def load_scores(path: Path) -> list[Score]:
+    with path.open(encoding="utf-8") as fh:
+        return [Score(**json.loads(line)) for line in fh if line.strip()]
 
 
 # --------------------------------------------------------------------------- run

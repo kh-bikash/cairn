@@ -434,9 +434,11 @@ def eval_cmd(
     out: Annotated[str, typer.Option()] = "../eval",
     only: Annotated[str | None, typer.Option(help="Comma-separated question ids")] = None,
     judge: Annotated[str, typer.Option(help="provider:model that grades answers against the ground truth; empty to skip")] = ("cloudflare:@cf/openai/gpt-oss-120b"),
+    rejudge: Annotated[bool, typer.Option(help="Re-grade the answers already in <out>/results.jsonl instead of asking again")] = False,
 ) -> None:
     """Score Cairn against dense and keyword RAG baselines and graph-only routing on questions with known answers."""
-    from cairn.evaluation import load_questions, run_eval, write_results
+    from cairn.evaluation import load_questions, load_scores, run_eval, write_results
+    from cairn.evaluation import rejudge as rejudge_scores
     from cairn.llm.client import LLM, same_model
 
     s = get_settings()
@@ -452,7 +454,16 @@ def eval_cmd(
             console.print(f"[yellow]the judge {judge} is the answering model; pick a different one for an independent grade[/]")
         judge_llm = LLM(s.model_copy(update={"model_extract": judge}))
     picked = [x.strip() for x in systems.split(",") if x.strip()]
-    scores = asyncio.run(run_eval(s, llm, qs, picked, judge_llm=judge_llm))
+    if rejudge:
+        if judge_llm is None:
+            raise typer.BadParameter("--rejudge needs --judge")
+        # Keep the label of the model that actually produced the stored answers.
+        previous = (Path(out) / "results.md").read_text(encoding="utf-8")
+        if "answering model `" in previous:
+            model = previous.split("answering model `", 1)[1].split("`", 1)[0]
+        scores = asyncio.run(rejudge_scores(load_scores(Path(out) / "results.jsonl"), qs, judge_llm))
+    else:
+        scores = asyncio.run(run_eval(s, llm, qs, picked, judge_llm=judge_llm))
     md = write_results(scores, qs, Path(out), model=model, judge_model=judge)
     console.print(md.read_text(encoding="utf-8"), markup=False)
     console.print_json(json.dumps(llm.usage.snapshot()))

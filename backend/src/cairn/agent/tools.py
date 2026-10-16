@@ -161,17 +161,22 @@ def _words(text: str) -> list[str]:
 _NAMED = re.compile(r"[A-Za-z][A-Za-z0-9_.-]*[A-Za-z0-9]")
 
 
-def _named_terms(text: str) -> set[str]:
-    """Stems of words that name a thing (Neo4j, MongoDB, gRPC, Kubernetes) rather than describe one.
+def _named_words(text: str) -> list[str]:
+    """Words that name a thing (Neo4j, MongoDB, gRPC, Kubernetes) rather than describe one.
 
     A named word has a digit, an inner capital, or a capital that doesn't start the sentence.
     """
-    out: set[str] = set()
+    out: list[str] = []
     for i, m in enumerate(_NAMED.finditer(text)):
         w = m.group(0)
-        if any(c.isdigit() for c in w) or any(c.isupper() for c in w[1:]) or (i > 0 and w[0].isupper()):
-            out |= {_stem(x) for x in _words(w)}
+        if (any(c.isdigit() for c in w) or any(c.isupper() for c in w[1:]) or (i > 0 and w[0].isupper())) and w not in out:
+            out.append(w)
     return out
+
+
+def _named_terms(text: str) -> set[str]:
+    """Stems of the named words in `text`."""
+    return {_stem(x) for w in _named_words(text) for x in _words(w)}
 
 
 def _stem(word: str) -> str:
@@ -315,6 +320,11 @@ class Tools:
         if decisions:
             return ToolResult({"decisions": decisions}, f"{len(decisions)} decisions on '{topic}'", sg, evidence)
 
+        # A named thing nothing in the data mentions ("MongoDB", "SNS") means the question's premise is unsupported:
+        # say so plainly instead of offering loosely related threads.
+        if unknown := self._unmentioned(topic):
+            note = f"Nothing in the data mentions {', '.join(unknown)}, so there is no recorded decision or discussion behind it."
+            return ToolResult({"decisions": [], "no_record_of": unknown, "note": note, "sources": []}, f"no record of {', '.join(unknown)}", SubGraph())
         # No extracted decision: fall back to the raw threads so the agent can still reason from sources.
         fallback = self.search(topic, limit=15)
         sources = self._rerank_by_topic(topic, fallback.data.get("sources", []))[:5]
@@ -322,7 +332,8 @@ class Tools:
         fallback.evidence = [e for e in fallback.evidence if e.uid in keep]
         fallback.data = {
             "decisions": [],
-            "note": "No extracted decision matches; these raw threads may contain the rationale.",
+            "note": "No recorded decision matches, and these threads don't confirm the premise; they are only the closest related "
+            "sources. Say plainly that no recorded decision explains it unless a thread clearly does.",
             "sources": sources,
         }
         fallback.summary = f"no decisions on '{topic}', {len(fallback.data['sources'])} raw threads"
@@ -382,6 +393,21 @@ class Tools:
             if overlap >= need and (not named or named & have):
                 scored.append((overlap, -uids.index(r["uid"]), r["uid"]))
         return [uid for _, _, uid in sorted(scored, reverse=True)]
+
+    def _unmentioned(self, topic: str) -> list[str]:
+        """Named words in the topic that no source, decision or system mentions at all."""
+        missing = []
+        for word in _named_words(topic):
+            if len(word) < 3:
+                continue
+            query = ft_query(word, prefix=False)
+            hits = sum(
+                self.store.ro_query(f"CALL db.idx.fulltext.queryNodes('{label}', $q) YIELD node RETURN count(node)", {"q": query})[0][0]
+                for label in ("Source", "Decision", "System")
+            )
+            if not hits:
+                missing.append(word)
+        return missing
 
     def _decision_term_frequency(self) -> dict[str, int]:
         """How many decisions mention each stemmed word (title, statement, reasons, alternatives, sources)."""
