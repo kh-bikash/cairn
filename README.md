@@ -504,9 +504,10 @@ Things we hit while building on the pinned FalkorDB image (graph module 6.0.2), 
 - A filtered `OPTIONAL MATCH` (or a pattern comprehension with `WHERE`) after an aggregating `WITH` can return
   no rows. Cairn avoids that shape, and `tests/test_integration.py` asserts every tool returns data.
 - An aggregating query that also returns a property name the graph has never stored
-  (`MATCH (s:N) RETURN s.name, s.never_set, count(s)`) crashes the server. Cairn wraps optional properties in
-  `coalesce()`.
-- `WHERE id(n) > -1` returns no rows, so the graph export pages with non-negative bounds.
+  (`MATCH (s:N) RETURN s.name, s.never_set, count(s)`) crashes the server on 6.0.x
+  ([FalkorDB#3150](https://github.com/FalkorDB/FalkorDB/issues/3150)). Cairn wraps optional properties in `coalesce()`.
+- `WHERE id(n) > -1` returns no rows on 6.0.x: negative id bounds wrap to unsigned
+  ([FalkorDB#2648](https://github.com/FalkorDB/FalkorDB/issues/2648)), so the graph export pages with non-negative bounds.
 - `toLower()` fails with "Invalid UTF8 string" on some bodies containing emoji. Cairn computes text features in
   Python at load time instead, and replaces unpaired surrogates before writing.
 - Graph algorithms follow edge direction, so undirected relationships (`WORKS_WITH`) are stored both ways.
