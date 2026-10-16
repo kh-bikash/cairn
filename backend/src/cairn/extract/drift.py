@@ -150,6 +150,26 @@ class DriftReport:
     error_samples: list[str] = field(default_factory=list)
 
 
+async def _second_opinion(llm: LLM, premise: dict[str, Any], later: str, decided_by: str) -> ChallengeCheck:
+    """A *different* model must agree there is a contradiction and quote the evidence. The model that gave the verdict
+    is excluded (including the same model behind another provider), so one model never confirms its own call."""
+    return await llm.structured(
+        "extract",
+        [
+            {
+                "role": "system",
+                "content": "Decide whether the LATER TEXT shows that the PREMISE is false or no longer holds. Be strict: "
+                "mentioning the same topic, praising, or adding detail is NOT a challenge. If it is a challenge, copy the single "
+                'sentence that shows it, verbatim. Return JSON: {"challenges": bool, "quote": str, "explanation": str (one sentence)}.',
+            },
+            {"role": "user", "content": f"PREMISE: {premise['text']}\n\nLATER TEXT:\n{later}"},
+        ],
+        ChallengeCheck,
+        max_tokens=300,
+        exclude={decided_by},
+    )
+
+
 async def check_premise(store: GraphStore, llm: LLM, decider: LLMDecider, premise: dict[str, Any], report: DriftReport) -> None:
     query = search_terms(premise["text"])
     candidates = []
@@ -173,21 +193,13 @@ async def check_premise(store: GraphStore, llm: LLM, decider: LLMDecider, premis
             continue
         # Second opinion from a *different* model: it must agree there is a contradiction and quote the evidence.
         # The model that gave the verdict is excluded, so one model can never confirm its own call.
-        check = await llm.structured(
-            "extract",
-            [
-                {
-                    "role": "system",
-                    "content": "Decide whether the LATER TEXT shows that the PREMISE is false or no longer holds. Be strict: "
-                    "mentioning the same topic, praising, or adding detail is NOT a challenge. If it is a challenge, copy the single "
-                    'sentence that shows it, verbatim. Return JSON: {"challenges": bool, "quote": str, "explanation": str (one sentence)}.',
-                },
-                {"role": "user", "content": f"PREMISE: {premise['text']}\n\nLATER TEXT:\n{later}"},
-            ],
-            ChallengeCheck,
-            max_tokens=300,
-            exclude={verdict.decided_by},
-        )
+        try:
+            check = await _second_opinion(llm, premise, later, verdict.decided_by)
+        except (LLMQuotaExhausted, LLMNotConfigured):
+            # No second model available right now: leave the premise unchecked so a later run confirms it,
+            # and keep checking the rest (most verdicts are 'unrelated' and need no confirmation).
+            report.deferred += 1
+            return
         if not check.challenges:
             report.rejected += 1
             continue

@@ -128,14 +128,17 @@ async def rag_answer(store: GraphStore, llm: LLM, question: str, k: int = 8) -> 
 
 
 async def agent_answer(agent: Agent, question: str, *, use_llm: bool) -> tuple[str, list[str], str]:
-    text, citations, mode = "", [], ""
+    """Returns (text, citations, mode); mode is 'unavailable' when the model could not be reached at all."""
+    text, citations, mode, unavailable = "", [], "", False
     async for event in agent.run(question, use_llm=use_llm):
         if event["type"] == "answer":
             text, mode = event["text"], event["mode"]
             citations = [c["uid"] for c in event["citations"]]
+        elif event["type"] == "notice":
+            unavailable = True  # the agent says the model is unavailable and answers from the graph instead
         elif event["type"] == "error":
             raise RuntimeError(event["message"])
-    return text, citations, mode
+    return text, citations, ("unavailable" if unavailable else mode)
 
 
 async def run_eval(store: GraphStore, llm: LLM, settings: Settings, questions: list[Question], systems: list[str]) -> list[Score]:
@@ -150,7 +153,9 @@ async def run_eval(store: GraphStore, llm: LLM, settings: Settings, questions: l
                     text, cites = await rag_answer(store, llm, q.question)
                 else:
                     text, cites, mode = await agent_answer(agent, q.question, use_llm=system == "cairn")
-                    if system == "cairn" and mode != "agent":
+                    # The agent may finish with the graph router when it searched without answering; that is still
+                    # Cairn's answer. Only a model that could not be reached at all voids the run.
+                    if system == "cairn" and mode == "unavailable":
                         raise RuntimeError("agent LLM unavailable; answer came from the router")
                 scores.append(score(q, system, text, cites, time.perf_counter() - started))
             except Exception as exc:  # noqa: BLE001 - record and continue; one failure must not void the run

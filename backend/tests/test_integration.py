@@ -113,6 +113,24 @@ async def test_drift_needs_the_second_model_to_agree(store: GraphStore) -> None:
     assert store.ro_query("MATCH ()-[c:CHALLENGES]->() RETURN count(c)")[0][0] == 0
 
 
+async def test_drift_defers_when_no_second_model_is_available(store: GraphStore) -> None:
+    from cairn.llm.client import LLMQuotaExhausted
+
+    class _NoSecondOpinion:
+        async def structured(self, *_: Any, **__: Any) -> ChallengeCheck:
+            raise LLMQuotaExhausted("every confirming model is out of quota")
+
+    premise = store.records(
+        "MATCH (d:Decision)-[:BECAUSE]->(p:Premise) RETURN p.uid AS uid, p.text AS text, d.uid AS decision, d.title AS title, d.ts AS ts, d.repo AS repo"
+    )[0]
+    store.query("MATCH (p:Premise {uid: $u}) SET p.drift_version = NULL", {"u": premise["uid"]})  # earlier tests check it
+    report = DriftReport()
+    await check_premise(store, _NoSecondOpinion(), _FakeDecider(), premise, report)  # type: ignore[arg-type]
+    assert report.deferred == 1 and report.challenges == 0
+    unchecked = store.records("MATCH (p:Premise {uid: $u}) RETURN p.drift_version AS v", {"u": premise["uid"]})[0]["v"]
+    assert unchecked is None, "a premise nobody could confirm stays unchecked for a later run"
+
+
 async def test_drift_detects_contradicting_later_pr(store: GraphStore) -> None:
     premise = store.records(
         "MATCH (d:Decision)-[:BECAUSE]->(p:Premise) RETURN p.uid AS uid, p.text AS text, d.uid AS decision, d.title AS title, d.ts AS ts, d.repo AS repo"
