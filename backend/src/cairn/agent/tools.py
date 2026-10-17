@@ -977,6 +977,11 @@ class Tools:
 
         return change_impact(self, system, change)
 
+    def decision_guard(self, title: str, body: str = "", files: list[str] | None = None) -> ToolResult:
+        from cairn.workflows import decision_guard
+
+        return decision_guard(self, title, body, files)
+
     def incident_memory(self, description: str) -> ToolResult:
         from cairn.workflows import incident_memory
 
