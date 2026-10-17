@@ -128,6 +128,76 @@ def change_impact(tools: Tools, system: str, change: str = "") -> ToolResult:
 
 # --------------------------------------------------------------------------- incident memory
 
+# --------------------------------------------------------------------------- decision guard
+
+# Words that signal a change is undoing or replacing something, compared by stem.
+_REVERSAL_STEMS = frozenset(_stem(w) for w in ("revert", "replace", "remove", "drop", "delete", "deprecate", "migrate", "rewrite", "switch", "disable", "rollback"))
+
+
+def decision_guard(tools: Tools, title: str, body: str = "", files: list[str] | None = None) -> ToolResult:
+    """A new PR or ticket arrives: which active decisions does it touch, and does it look like it undoes one?"""
+    from cairn.agent.router import find_systems  # local import: router imports this module
+
+    change_text = f"{title}\n{body}"
+    if not change_text.strip():
+        raise ToolError("give the change a title or description")
+    systems = find_systems(tools, f"{change_text}\n" + "\n".join(files or []))[:4]
+    change_stems = _stems(change_text)
+    reverses = bool({_stem(w) for w in _words(change_text)} & _REVERSAL_STEMS)
+
+    sg = SubGraph()
+    evidence: list[Evidence] = []
+    findings: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for key in systems:
+        rows = tools.store.records(
+            "MATCH (d:Decision)-[:AFFECTS]->(:System {key: $k}) WHERE coalesce(d.status, 'active') <> 'superseded' RETURN d.uid AS uid ORDER BY d.ts DESC LIMIT 6",
+            {"k": key},
+        )
+        for row in rows:
+            if row["uid"] in seen:
+                continue
+            seen.add(row["uid"])
+            detail = tools._decision_detail(row["uid"], sg, evidence)
+            if detail.get("missing"):
+                continue
+            reasons = [p["claim"] for p in detail["premises"][:3]]
+            topic = _stems(" ".join([detail["title"], detail.get("summary") or "", *reasons]))
+            overlap = sorted(change_stems & topic)
+            drifted = bool(detail["drift_detected"])
+            # Relevant only when the change really talks about the same thing; this keeps the guard quiet otherwise.
+            if len(overlap) < 2 and not (drifted and overlap):
+                continue
+            level = "conflict" if reverses and len(overlap) >= 2 else "challenged" if drifted else "respect"
+            findings.append(
+                {
+                    "uid": detail["uid"],
+                    "title": detail["title"],
+                    "date": detail["date"],
+                    "level": level,
+                    "system": key,
+                    "deciders": detail["deciders"],
+                    "reasons": reasons,
+                    "drift_detected": drifted,
+                    "matched_terms": overlap[:6],
+                }
+            )
+    order = {"conflict": 0, "challenged": 1, "respect": 2}
+    findings.sort(key=lambda f: order[f["level"]])
+    verdict = "review" if any(f["level"] == "conflict" for f in findings) else "heads_up" if findings else "clear"
+
+    lines = [f"**Decision check for: {title}**", ""]
+    if not findings:
+        lines.append("No active decisions in the graph conflict with or constrain this change." if systems else "No known system matched this change.")
+    for f in findings:
+        label = {"conflict": "May reverse", "challenged": "Reasons challenged", "respect": "Constrains this change"}[f["level"]]
+        who = ", ".join(f"`{h}`" for h in f["deciders"]) or "unknown"
+        lines.append(f"- **{label}:** {f['title']} ({f['date']}), decided by {who}")
+        lines += [f"  - because: {r}" for r in f["reasons"]]
+    data = {"title": title, "systems": systems, "verdict": verdict, "reverses": reverses, "findings": findings, "draft": "\n".join(lines)}
+    summary = f"{verdict.replace('_', ' ')}: {_n(len(findings), 'decision')} flagged across {_n(len(systems), 'system')}"
+    return ToolResult(data, summary, sg, evidence)
+
 
 def incident_memory(tools: Tools, description: str, limit: int = 5) -> ToolResult:
     from cairn.extract.drift import search_terms
