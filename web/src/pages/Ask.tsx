@@ -107,7 +107,7 @@ export function AskPage({ summary, workspaceName, theme }: { summary: WorkspaceS
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="mx-auto w-full max-w-3xl flex-1 px-5 pb-6 pt-8 sm:px-8">
+      <div className={cx('mx-auto w-full flex-1 px-5 pb-6 pt-8 sm:px-8', turns.length === 0 ? 'max-w-3xl' : 'max-w-6xl')}>
         {turns.length === 0 ? (
           <Welcome summary={summary} workspaceName={workspaceName} onAsk={onAsk} />
         ) : (
@@ -170,17 +170,31 @@ function Welcome({ summary, workspaceName, onAsk }: { summary: WorkspaceSummary 
 
 function TurnView({ turn, theme }: { turn: Turn; theme: Theme }) {
   const [showSteps, setShowSteps] = useState(false)
-  const [showGraph, setShowGraph] = useState(false)
+  const [showGraph, setShowGraph] = useState(true)
   const [activeCite, setActiveCite] = useState<string | null>(null)
   const sourcesRef = useRef<HTMLDivElement>(null)
 
   const onCite = (c: Citation) => {
-    setActiveCite(c.uid)
+    setActiveCite((cur) => (cur === c.uid ? null : c.uid))
     sourcesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }
 
+  // Light up the cited source and everything one hop away, so the path to it is obvious.
+  const highlight = (() => {
+    if (!activeCite) return undefined
+    const id = `Source:${activeCite}`
+    const ids = new Set<string>([id])
+    for (const e of turn.graph.edges) {
+      if (e.source === id) ids.add(e.target)
+      if (e.target === id) ids.add(e.source)
+    }
+    return ids.size > 1 ? ids : undefined
+  })()
+  const graphOpen = showGraph && turn.graph.nodes.length > 0
+
   return (
-    <section className="fade-up">
+    <section className={cx('fade-up', graphOpen && 'lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:items-start lg:gap-8')}>
+      <div className="min-w-0">
       <h2 className="text-lg font-semibold leading-snug tracking-tight text-fg">{turn.question}</h2>
       {turn.steps.length > 0 && (
         <button onClick={() => setShowSteps((s) => !s)} className="mt-2 inline-flex items-center gap-1 text-xs text-muted hover:text-fg">
@@ -233,11 +247,6 @@ function TurnView({ turn, theme }: { turn: Turn; theme: Theme }) {
           )}
         </div>
       )}
-      {showGraph && (
-        <div className="mt-3">
-          <GraphView graph={turn.graph} theme={theme} height={380} />
-        </div>
-      )}
       {turn.answer && turn.answer.citations.length > 0 && (
         <div ref={sourcesRef} className="mt-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-faint">Sources</p>
@@ -247,6 +256,14 @@ function TurnView({ turn, theme }: { turn: Turn; theme: Theme }) {
             ))}
           </div>
         </div>
+      )}
+      </div>
+      {graphOpen && (
+        <aside className="mt-5 lg:sticky lg:top-6 lg:mt-1">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-faint">Reasoning graph</p>
+          <GraphView graph={turn.graph} theme={theme} height={420} highlight={highlight} />
+          <p className="mt-2 text-xs text-faint">Click a [number] in the answer to light up its path. Click a node to open it.</p>
+        </aside>
       )}
     </section>
   )
