@@ -58,6 +58,10 @@ class IncidentRequest(BaseModel):
 class HandoffRequest(BaseModel):
     handle: str = Field(min_length=1, max_length=100)
 
+class GuardRequest(BaseModel):
+    title: str = Field(min_length=3, max_length=300)
+    body: str = Field(default="", max_length=6_000)
+    files: list[str] = Field(default_factory=list, max_length=100)
 
 class SyncRequest(BaseModel):
     repos: list[str] = Field(min_length=1, max_length=10)
@@ -366,6 +370,10 @@ def create_app() -> FastAPI:
     @app.post("/api/workflows/incident")
     async def wf_incident(body: IncidentRequest, request: Request) -> dict[str, Any]:
         return await _workflow(st(request).tools.incident_memory, body.description)
+
+    @app.post("/api/workflows/decision-guard")
+    async def wf_decision_guard(body: GuardRequest, request: Request) -> dict[str, Any]:
+        return await _workflow(st(request).tools.decision_guard, body.title, body.body, body.files)
 
     @app.post("/api/workflows/handoff")
     async def wf_handoff(body: HandoffRequest, request: Request) -> dict[str, Any]:

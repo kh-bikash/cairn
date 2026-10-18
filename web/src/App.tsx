@@ -12,7 +12,7 @@ import { PeoplePage } from './pages/People'
 import { SettingsPage } from './pages/Settings'
 import { SourcePage } from './pages/Source'
 import { SystemsPage } from './pages/Systems'
-import { ChangePage, HandoffPage, IncidentPage } from './pages/Workflows'
+import { ChangePage, GuardPage, HandoffPage, IncidentPage } from './pages/Workflows'
 
 export default function App() {
   const route = useRoute()
@@ -88,6 +88,8 @@ export default function App() {
         return <SystemsPage id={route.id} theme={theme} />
       case 'source':
         return route.id ? <SourcePage uid={route.id} /> : null
+      case 'guard':
+        return <GuardPage theme={theme} />
       case 'change':
         return <ChangePage initial={route.id} theme={theme} />
       case 'incident':

@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from cairn.agent.tools import ToolResult, Tools, _named_terms, _stem
+from cairn.multihop import render_departed, render_stale, render_trace
 
 if TYPE_CHECKING:
     from cairn.agent.loop import Ledger
@@ -22,6 +23,26 @@ _INTENTS: list[tuple[str, re.Pattern[str]]] = [
     ("act_wiki", re.compile(r"\b(update|refresh|publish|sync|regenerate)\b.*\b(wiki|knowledge ?base|docs?)\b", re.I)),
     ("act_route", re.compile(r"\b(route|triage|assign)\b.*#\s*\d+", re.I)),
     ("incident", re.compile(r"\b(incident|outage|is down|went down|broken|failing|errors?|sev ?[12]|paged|alert(?:ing)?|on-?call)\b", re.I)),
+    (
+        "stale_runbook",
+        re.compile(r"\brunbooks?\b.*\b(out of date|outdated|stale|obsolete)\b|\b(out of date|outdated|stale)\b.*\brunbooks?\b", re.I),
+    ),
+    (
+        "departed",
+        re.compile(
+            r"\bdecisions?\b.*\b(left|departed|no longer (?:here|with us|at the company))\b"
+            r"|\b(left|departed)\b.*\bdecisions?\b|\b(people|those|someone|engineers?) who (?:have )?(?:since )?left\b",
+            re.I,
+        ),
+    ),
+    (
+        "trace",
+        re.compile(
+            r"\b(which|what) (?:of our )?(?:projects?|repos?|repositories|services)\b.*\b(adopt\w*|migrat\w*|implement\w*)\b"
+            r"|\bwho drove\b|\bearlier (?:fix|change|pr|issue)\b",
+            re.I,
+        ),
+    ),
     (
         "change",
         re.compile(r"\b(before (?:i|we) change|planning to change|want to change|about to change|rename|deprecate|remove|upgrade|migrat\w*|change to)\b", re.I),
@@ -305,6 +326,12 @@ def route(tools: Tools, question: str, action_repos: list[str] | None = None) ->
     plan = Plan(intent)
     if intent == "incident":
         return Plan(intent, [("incident_memory", {"description": question})])
+    if intent == "departed":
+        return Plan(intent, [("departed_decisions", {})])
+    if intent == "stale_runbook":
+        return Plan(intent, [("stale_runbooks", {})])
+    if intent == "trace":
+        return Plan(intent, [("trace_topic", {"topic": question})])
     if intent == "change" and systems:
         return Plan(intent, [("change_impact", {"system": systems[0], "change": question})])
     if intent == "handoff" and people:
@@ -547,4 +574,7 @@ RENDERERS: dict[str, Callable[[ToolResult, Ledger], str]] = {
     "teams": _render_teams,
     "connect": _render_connect,
     "search": _render_generic,
+    "departed_decisions": render_departed,
+    "stale_runbooks": render_stale,
+    "trace_topic": render_trace,
 }

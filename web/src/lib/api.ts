@@ -96,6 +96,8 @@ export const api = {
   tool: <R = Record<string, unknown>>(name: string, args: Record<string, unknown> = {}) =>
     json<T.ToolResponse<R>>(`/api/tools/${name}`, post({ args })),
   changeImpact: (system: string, change: string) => json<T.ToolResponse<T.ChangeImpact>>('/api/workflows/change-impact', post({ system, change })),
+  decisionGuard: (title: string, body: string, files: string[]) =>
+    json<T.ToolResponse<T.DecisionGuard>>('/api/workflows/decision-guard', post({ title, body, files })),
   incident: (description: string) => json<T.ToolResponse<T.IncidentMemory>>('/api/workflows/incident', post({ description })),
   handoff: (handle: string) => json<T.ToolResponse<T.HandoffPlan>>('/api/workflows/handoff', post({ handle })),
   proposeChange: (system: string, change: string) => json<T.Action>('/api/workflows/change-impact/propose', post({ system, change })),

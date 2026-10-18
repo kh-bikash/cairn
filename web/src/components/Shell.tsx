@@ -1,4 +1,4 @@
-import { Boxes, GitCompareArrows, Inbox, Landmark, Menu, MessageSquareText, Moon, Settings, Siren, Sun, UserRoundMinus, Users, X } from 'lucide-react'
+import { Boxes, GitCompareArrows, Inbox, Landmark, Menu, MessageSquareText, Moon, Settings, ShieldCheck, Siren, Sun, UserRoundMinus, Users, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { href, type Route } from '../lib/router'
 import type { Theme } from '../lib/theme'
@@ -23,6 +23,7 @@ const NAV: { page: string; label: string; icon: typeof Users; group?: string }[]
   { page: 'decisions', label: 'Decisions', icon: Landmark },
   { page: 'people', label: 'People', icon: Users },
   { page: 'systems', label: 'Systems', icon: Boxes },
+  { page: 'guard', label: 'Decision guard', icon: ShieldCheck, group: 'Workflows' },
   { page: 'change', label: 'Change impact', icon: GitCompareArrows, group: 'Workflows' },
   { page: 'incident', label: 'Incident memory', icon: Siren, group: 'Workflows' },
   { page: 'handoff', label: 'Handoff', icon: UserRoundMinus, group: 'Workflows' },

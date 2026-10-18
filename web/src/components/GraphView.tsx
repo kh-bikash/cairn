@@ -145,6 +145,7 @@ export function GraphView({ graph, theme, height = 420, highlight, focus }: Prop
     return s
   }, [hover, data.links])
 
+  const focusing = !!highlight && highlight.size > 0
   const lit = (id: string) => !highlight || highlight.size === 0 || highlight.has(id)
 
   return (
@@ -172,9 +173,21 @@ export function GraphView({ graph, theme, height = 420, highlight, focus }: Prop
             const [a, b] = ends(l)
             const on = lit(a) && lit(b)
             if (l.type === 'CHALLENGES') return palette['--graph-drift']
+            if (focusing && on) return palette['--accent']
             return on ? palette['--graph-edge'] : `${palette['--graph-edge']}55`
           }}
-          linkWidth={(l) => (l.type === 'CHALLENGES' ? 1.6 : 1)}
+          linkWidth={(l) => {
+            const [a, b] = ends(l)
+            if (l.type === 'CHALLENGES') return 1.6
+            return focusing && lit(a) && lit(b) ? 1.8 : 1
+          }}
+          linkDirectionalParticles={(l) => {
+            const [a, b] = ends(l)
+            return focusing && lit(a) && lit(b) ? 3 : 0
+          }}
+          linkDirectionalParticleWidth={2.4}
+          linkDirectionalParticleSpeed={0.006}
+          linkDirectionalParticleColor={() => palette['--accent']}
           linkDirectionalArrowLength={3}
           linkDirectionalArrowRelPos={0.92}
           nodeCanvasObject={(node, ctx, scale) => {
