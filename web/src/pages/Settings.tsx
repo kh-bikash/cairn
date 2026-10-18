@@ -47,15 +47,14 @@ export function SettingsPage({ health, workspace }: { health: Health | null; wor
 
   return (
     <Page title="Settings" subtitle={workspace ? `${workspace.name}: ${workspace.description}` : undefined}>
-      <SectionTitle>AI models</SectionTitle>
+      <SectionTitle>AI</SectionTitle>
       <Card className="divide-y divide-line px-4">
         {health &&
           Object.entries(health.llm).map(([role, m]) => (
             <KeyValue key={role} label={role === 'decide' ? 'Quick checks' : role === 'extract' ? 'Reading decisions' : 'Answering'}>
               <span className="inline-flex items-center gap-1.5">
                 {m.ready ? <CheckCircle2 className="h-4 w-4 text-ok" /> : <XCircle className="h-4 w-4 text-danger" />}
-                <span className="font-mono text-xs">{m.model.split(',')[0]}</span>
-                {m.model.includes(',') && <Badge>+{m.model.split(',').length - 1} fallbacks</Badge>}
+                <span className="text-xs">{m.ready ? 'Ready' : 'Not configured: graph-only'}</span>
               </span>
             </KeyValue>
           ))}

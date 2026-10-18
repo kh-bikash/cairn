@@ -34,7 +34,6 @@ const NAV: { page: string; label: string; icon: typeof Users; group?: string }[]
 export function Shell({ route, theme, onToggleTheme, health, healthError, workspaces, workspace, onWorkspace, pending, children }: Props) {
   const [open, setOpen] = useState(false)
   const agentReady = health?.llm.agent?.ready
-  const model = health?.llm.agent?.model.split(',')[0].split(':').slice(1).join(':')
   const current = route.page === 'source' ? '' : route.page
 
   const sidebar = (
@@ -84,8 +83,8 @@ export function Shell({ route, theme, onToggleTheme, health, healthError, worksp
       })}
       <div className="mt-auto flex items-center gap-2 border-t border-line px-2 pt-3">
         <span className={cx('h-2 w-2 shrink-0 rounded-full', healthError ? 'bg-danger' : agentReady ? 'bg-ok' : 'bg-warn')} />
-        <span className="min-w-0 flex-1 truncate text-xs text-muted" title={healthError ? 'API unreachable' : agentReady ? model : 'No AI key: answers come straight from the graph'}>
-          {healthError ? 'Reconnecting…' : agentReady ? model : 'Graph-only answers'}
+        <span className="min-w-0 flex-1 truncate text-xs text-muted" title={healthError ? 'API unreachable' : agentReady ? 'AI answers, grounded in the graph' : 'No AI key: answers come straight from the graph'}>
+          {healthError ? 'Reconnecting…' : agentReady ? 'AI answers on' : 'Graph-only answers'}
         </span>
         <button onClick={onToggleTheme} className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-fg" aria-label="Toggle theme">
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

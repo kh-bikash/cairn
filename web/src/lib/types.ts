@@ -89,7 +89,7 @@ export interface Turn {
 export interface Health {
   ok: boolean
   graph: string
-  llm: Record<string, { model: string; ready: boolean }>
+  llm: Record<string, { ready: boolean }>
   repos: string[]
   admin_required: boolean
 }

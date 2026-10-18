@@ -158,7 +158,7 @@ def create_app() -> FastAPI:
         return {
             "ok": ok,
             "graph": s.store.name,
-            "llm": {role: {"model": getattr(s.settings, f"model_{role}"), "ready": s.llm.available(role)} for role in ("decide", "extract", "agent")},
+            "llm": {role: {"ready": s.llm.available(role)} for role in ("decide", "extract", "agent")},  # which models is not public
             "repos": snapshot_repos(s.settings) or s.settings.repos,
             "admin_required": s.settings.admin_token is not None,
         }
