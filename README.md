@@ -22,7 +22,8 @@ that graph, with every claim linked to the message, ticket or document that supp
 [MCP](#use-it-from-your-ai-tools-mcp) ·
 [Deployment](#deployment) ·
 [Development](#development) ·
-[Scope](#scope-honestly)
+[Scope](#scope-honestly) ·
+[AI assistance](#ai-assistance)
 
 ## What it does
 
@@ -525,3 +526,9 @@ Things we hit while building on the pinned FalkorDB image (graph module 6.0.2), 
 - Orbiton is fictional; its people and conversations are generated. The FalkorDB workspace is real public data.
 - Live sync is built for GitHub. Slack, Jira and docs come in as exports (`cairn workspace import`), not live connectors.
 - Expertise is inferred from activity, so it reflects who did the work, not formal ownership, unless an org chart or CODEOWNERS says otherwise.
+
+## AI assistance
+
+Built with Claude Code as a coding assistant. The team decided what to build, designed the data, the graph model and the
+architecture, chose the hosting, and reviewed and tested the code; the assistant did much of the typing. Cairn itself
+runs only on free models (see [How it works](#how-it-works)).

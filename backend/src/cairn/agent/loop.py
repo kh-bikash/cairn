@@ -42,6 +42,8 @@ _CITE = re.compile(rf"\[\s*({_ITEM}(?:\s*,\s*{_ITEM})*)\s*\]")
 # gpt-oss cites with lenticular brackets (【1】); some models use full-width ones (［1］).
 _BRACKETS = str.maketrans({"【": "[", "】": "]", "［": "[", "］": "]"})
 _RANGE = re.compile(rf"^(\d+)\s*[{_DASHES}]\s*(\d+)$")
+# gpt-oss also annotates refs (【1†source】), and with no numbered sources it may cite a tool by name ([impact]).
+_DAGGER = re.compile(r"\[\s*(\d+)\s*†[^\]\n]*\]|\[\s*(?:ref|source|src)\s*:?\s*#?(\d+)\s*\]", re.I)
 _MAX_TOOL_CHARS = 9_000
 
 SYSTEM_PROMPT = """You are Cairn, a company brain for an engineering organisation. You answer questions about
@@ -90,6 +92,7 @@ ACTION_SPECS: list[dict[str, Any]] = [
     },
 ]
 ACTION_NAMES = {spec["function"]["name"] for spec in ACTION_SPECS}
+_TOOL_CITE = re.compile(r"\s*\[(?:" + "|".join(sorted({str(s["function"]["name"]) for s in TOOL_SPECS} | ACTION_NAMES, key=len, reverse=True)) + r")\]")
 
 
 @dataclass
@@ -130,7 +133,9 @@ def clean_citations(text: str, ledger: Ledger) -> tuple[str, list[dict[str, Any]
                 kept.append(f"[{int(part)}]")
         return "".join(kept)
 
-    cleaned = _CITE.sub(repl, text.translate(_BRACKETS))
+    text = _DAGGER.sub(lambda m: f"[{m.group(1) or m.group(2)}]", text.translate(_BRACKETS))
+    text = _TOOL_CITE.sub("", text)
+    cleaned = _CITE.sub(repl, text)
     cleaned = re.sub(r"[ \t]+([.,;:])", r"\1", cleaned)
     citations = [
         {"ref": r, "uid": e["uid"], "title": e["title"], "url": e["url"], "kind": e["kind"], "date": e["date"], "quote": e.get("quote")}
