@@ -1,4 +1,4 @@
-import { ArrowUp, ChevronDown, ChevronRight, GitCompareArrows, Loader2, Network, Quote, Siren, Square, UserRoundMinus } from 'lucide-react'
+import { ArrowUp, ChevronDown, ChevronRight, GitCompareArrows, Loader2, Network, Quote, Route, Siren, Square, UserRoundMinus } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { ActionCard } from '../components/ActionCard'
 import { GraphView } from '../components/GraphView'
@@ -29,6 +29,9 @@ const STEP_LABEL: Record<string, string> = {
   handoff_plan: 'Drafted a handoff plan',
   propose_wiki_update: 'Drafted a wiki update',
   propose_issue_routing: 'Drafted issue routing',
+  departed_decisions: 'Followed decisions to what depends on them',
+  stale_runbooks: 'Checked runbooks for staleness',
+  trace_topic: 'Traced a topic across repos',
 }
 
 let seq = 0
@@ -76,7 +79,7 @@ export function AskPage({ summary, workspaceName, theme }: { summary: WorkspaceS
             update(id, (t) => ({
               ...t,
               graph: e.name === 'search' ? t.graph : merge(t.graph, e.subgraph),
-              steps: t.steps.map((s) => (s.id === e.id ? { ...s, summary: e.summary, error: e.error, action: e.action } : s)),
+              steps: t.steps.map((s) => (s.id === e.id ? { ...s, summary: e.summary, error: e.error, action: e.action, trace: e.trace } : s)),
             }))
             break
           case 'notice':
@@ -213,6 +216,27 @@ function TurnView({ turn, theme }: { turn: Turn; theme: Theme }) {
           ))}
         </ol>
       )}
+      {turn.steps
+        .filter((s) => s.trace && s.trace.length > 0)
+        .map((s) => (
+          <div key={`trace-${s.id}`} className="mt-4 rounded-xl border border-line bg-surface p-4">
+            <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-faint">
+              <Route className="h-3.5 w-3.5" /> How this was worked out
+            </p>
+            <ol className="relative space-y-3 border-l border-line pl-5">
+              {s.trace!.map((t, i) => (
+                <li key={t.n} className="fade-up relative" style={{ animationDelay: `${i * 140}ms` }}>
+                  <span className="absolute -left-[29px] top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white">{t.n}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium text-fg">{t.title}</span>
+                    {t.count != null && <Badge>{t.count}</Badge>}
+                  </div>
+                  <p className="text-[13px] text-muted">{t.detail}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
       {turn.pending && !turn.answer && turn.steps.length === 0 && (
         <p className="mt-3 flex items-center gap-2 text-sm text-muted">
           <Loader2 className="h-4 w-4 animate-spin" /> Reading the graph…

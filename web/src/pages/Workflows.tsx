@@ -508,7 +508,6 @@ export function GuardPage({ theme }: { theme: Theme }) {
                             </a>
                           ))}
                         </span>
-                        {f.matched_terms.length > 0 && <span>? matched on {f.matched_terms.join(', ')}</span>}
                       </div>
                     </Card>
                   )

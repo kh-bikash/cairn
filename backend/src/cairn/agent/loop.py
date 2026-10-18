@@ -283,6 +283,8 @@ class Agent:
             "subgraph": result.subgraph.to_dict(),
             "evidence": [ledger.entries[ev.uid] for ev in result.evidence],
         }
+        if isinstance(result.data.get("trace"), list):
+            event["trace"] = result.data["trace"]
         if name in ACTION_NAMES:
             event["action"] = result.data["action"]
         return event, content, result

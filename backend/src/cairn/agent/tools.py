@@ -982,6 +982,21 @@ class Tools:
 
         return decision_guard(self, title, body, files)
 
+    def departed_decisions(self) -> ToolResult:
+        from cairn.multihop import departed_decisions
+
+        return departed_decisions(self)
+
+    def stale_runbooks(self) -> ToolResult:
+        from cairn.multihop import stale_runbooks
+
+        return stale_runbooks(self)
+
+    def trace_topic(self, topic: str) -> ToolResult:
+        from cairn.multihop import trace_topic
+
+        return trace_topic(self, topic)
+
     def incident_memory(self, description: str) -> ToolResult:
         from cairn.workflows import incident_memory
 
@@ -1176,6 +1191,25 @@ TOOL_SPECS: list[dict[str, Any]] = [
         ["text"],
     ),
     _fn("list_systems", "List known systems (repos and modules) with activity counts.", {"repo": _S}, []),
+    _fn(
+        "departed_decisions",
+        "Multi-step: decisions made by people who have left, what each affects, and what still depends on those systems. Returns the steps taken.",
+        {},
+        [],
+    ),
+    _fn(
+        "stale_runbooks",
+        "Multi-step: runbooks that may be out of date (author left, newer postmortem on the same system, relied-on decision challenged). Returns the steps taken.",
+        {},
+        [],
+    ),
+    _fn(
+        "trace_topic",
+        "Multi-step: follow a topic across repos. Finds PRs/issues about it, groups them by repo and author, and follows references to earlier work. "
+        "Use for 'which projects adopted X and who drove it' or 'which earlier fix does X refer to'.",
+        {"topic": {**_S, "description": "the thing to trace, in a few words"}},
+        ["topic"],
+    ),
 ]
 
 

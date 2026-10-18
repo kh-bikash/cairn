@@ -51,10 +51,17 @@ export type AgentEvent =
   | { type: 'start'; question: string }
   | { type: 'notice'; message: string }
   | { type: 'tool_call'; id: string; name: string; args: Record<string, unknown> }
-  | { type: 'tool_result'; id: string; name: string; summary: string; error?: boolean; subgraph: SubGraph; evidence: Citation[]; action?: Action }
+  | { type: 'tool_result'; id: string; name: string; summary: string; error?: boolean; subgraph: SubGraph; evidence: Citation[]; action?: Action; trace?: TraceStep[] }
   | { type: 'answer'; text: string; citations: Citation[]; answer_uid: string; mode: 'agent' | 'router' }
   | { type: 'error'; message: string }
   | { type: 'done'; usage: Record<string, Usage>; seconds: number }
+
+export interface TraceStep {
+  n: number
+  title: string
+  detail: string
+  count: number | null
+}
 
 export interface Step {
   id: string
@@ -64,6 +71,7 @@ export interface Step {
   error?: boolean
   nodeIds: string[]
   action?: Action
+  trace?: TraceStep[]
 }
 
 export interface Turn {
