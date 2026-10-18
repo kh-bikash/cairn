@@ -240,6 +240,6 @@ def test_eval_scores_replies_as_their_thread_and_reports_judged() -> None:
 def test_annotated_and_tool_name_citations_are_cleaned() -> None:
     ledger = Ledger()
     ledger.add(Evidence("s1", "t1", None, "pr", 0))
-    text, cites = clean_citations("Nothing recorded【1†source】. Four repos depend on it [impact]. See [the docs](x).", ledger)
-    assert text == "Nothing recorded[1]. Four repos depend on it. See [the docs](x)."
+    text, cites = clean_citations("Nothing recorded【1†source】. Four repos depend on it [impact]. Lena said so [ref 1]. See [the docs](x).", ledger)
+    assert text == "Nothing recorded[1]. Four repos depend on it. Lena said so [1]. See [the docs](x)."
     assert [c["ref"] for c in cites] == [1]
