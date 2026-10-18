@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowDownLeft, BookOpen, GitCompareArrows, Siren, UserRoundMinus } from 'lucide-react'
+import { AlertTriangle, ArrowDownLeft, BookOpen, GitCompareArrows, ShieldCheck, Siren, UserRoundMinus } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { ActionCard } from '../components/ActionCard'
 import { GraphView } from '../components/GraphView'
@@ -8,7 +8,7 @@ import { api } from '../lib/api'
 import { kindLabel, pct, shortSystem } from '../lib/format'
 import { href, sourceHref } from '../lib/router'
 import type { Theme } from '../lib/theme'
-import type { Action, ChangeImpact, HandoffPlan, IncidentMemory, ToolResponse } from '../lib/types'
+import type { Action, ChangeImpact, DecisionGuard, HandoffPlan, IncidentMemory, ToolResponse } from '../lib/types'
 import { useAsync } from '../lib/useAsync'
 
 function useRun<T>() {
@@ -385,6 +385,148 @@ export function HandoffPage({ initial, theme }: { initial: string | null; theme:
           </div>
           <SectionTitle>Graph</SectionTitle>
           <GraphView graph={result.subgraph} theme={theme} height={340} focus={`Person:${d.person.handle}`} />
+        </div>
+      )}
+    </Shell>
+  )
+}
+
+// --------------------------------------------------------------------------- decision guard
+
+const GUARD_EXAMPLE = {
+  title: 'Replace Kafka with a cron job for the events pipeline',
+  body: 'Drop the MSK consumers and run a nightly batch instead.',
+}
+
+const VERDICT = {
+  review: { label: 'Needs review', tone: 'danger' as const, text: 'This change may reverse a decision the team made on purpose.' },
+  heads_up: { label: 'Heads up', tone: 'warn' as const, text: 'This change touches decisions the team has made. Worth a look.' },
+  clear: { label: 'Clear', tone: 'ok' as const, text: 'No active decision conflicts with this change.' },
+}
+
+const LEVEL = {
+  conflict: { label: 'May reverse', tone: 'danger' as const },
+  challenged: { label: 'Reasons challenged', tone: 'warn' as const },
+  respect: { label: 'Constrains this change', tone: 'accent' as const },
+}
+
+export function GuardPage({ theme }: { theme: Theme }) {
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [files, setFiles] = useState('')
+  const { result, error, busy, run } = useRun<ToolResponse<DecisionGuard>>()
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    if (title.trim().length < 3) return
+    const paths = files
+      .split('\n')
+      .map((f) => f.trim())
+      .filter(Boolean)
+    run(api.decisionGuard(title.trim(), body.trim(), paths))
+  }
+  const d = result?.data
+  const verdict = d ? VERDICT[d.verdict] : null
+  return (
+    <Shell
+      icon={<ShieldCheck className="h-5 w-5 text-accent" />}
+      title="Decision guard"
+      subtitle="Paste a new PR or ticket. Cairn checks it against the decisions already made on the systems it touches and warns before one is undone by accident."
+      form={
+        <form onSubmit={submit} className="space-y-3">
+          <label className="block text-sm">
+            <span className="mb-1 block text-xs font-medium text-muted">Title</span>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Replace Kafka with a cron job for the events pipeline" aria-label="Title" />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block text-xs font-medium text-muted">Description (optional)</span>
+            <Textarea rows={3} value={body} onChange={(e) => setBody(e.target.value)} placeholder="What does this change do, and why?" aria-label="Description" />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block text-xs font-medium text-muted">Files touched, one per line (optional)</span>
+            <Textarea rows={2} value={files} onChange={(e) => setFiles(e.target.value)} placeholder="src/events/consumer.py" aria-label="Files touched" />
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="primary" type="submit" loading={busy} disabled={title.trim().length < 3}>
+              Check against decisions
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setTitle(GUARD_EXAMPLE.title)
+                setBody(GUARD_EXAMPLE.body)
+                setFiles('')
+              }}
+            >
+              Try an example
+            </Button>
+          </div>
+        </form>
+      }
+    >
+      <ErrorNote error={error} />
+      {d && result && verdict && (
+        <div className="fade-up">
+          <Card className="p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone={verdict.tone}>
+                {d.verdict === 'clear' ? <ShieldCheck className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />} {verdict.label}
+              </Badge>
+              <span className="text-sm text-fg">{verdict.text}</span>
+            </div>
+            {d.systems.length > 0 && (
+              <p className="mt-2 text-xs text-faint">
+                Systems matched: {d.systems.map((s) => shortSystem(s)).join(', ')}
+              </p>
+            )}
+          </Card>
+          {d.findings.length > 0 && (
+            <>
+              <SectionTitle>Decisions involved</SectionTitle>
+              <div className="space-y-2">
+                {d.findings.map((f) => {
+                  const level = LEVEL[f.level]
+                  return (
+                    <Card key={f.uid} className="p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge tone={level.tone}>{level.label}</Badge>
+                        <a href={href('decisions', f.uid)} className="text-sm font-medium text-fg hover:underline">
+                          {f.title}
+                        </a>
+                        {f.date && <span className="text-xs text-faint">{f.date}</span>}
+                      </div>
+                      <ul className="mt-2 list-disc pl-4 text-[13px] text-muted">
+                        {f.reasons.map((r) => (
+                          <li key={r}>{r}</li>
+                        ))}
+                      </ul>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-faint">
+                        <span>Decided by</span>
+                        <span className="flex gap-1">
+                          {f.deciders.map((p) => (
+                            <a key={p} href={href('people', p)} title={p}>
+                              <Avatar handle={p} size={22} />
+                            </a>
+                          ))}
+                        </span>
+                        {f.matched_terms.length > 0 && <span>? matched on {f.matched_terms.join(', ')}</span>}
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            </>
+          )}
+          <SectionTitle>Draft comment</SectionTitle>
+          <Card className="p-4">
+            <Markdown text={d.draft} className="text-[14px]" />
+          </Card>
+          <p className="mt-2 text-xs text-faint">A draft only. Nothing is posted anywhere, and usernames are never @-mentioned.</p>
+          {result.subgraph.nodes.length > 0 && (
+            <>
+              <SectionTitle>Graph</SectionTitle>
+              <GraphView graph={result.subgraph} theme={theme} height={340} />
+            </>
+          )}
         </div>
       )}
     </Shell>

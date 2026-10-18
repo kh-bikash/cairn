@@ -310,3 +310,22 @@ export interface SyncJob {
   finished: number | null
   error: string | null
 }
+
+export interface DecisionGuard {
+  title: string
+  systems: string[]
+  verdict: 'review' | 'heads_up' | 'clear'
+  reverses: boolean
+  findings: {
+    uid: string
+    title: string
+    date: string | null
+    level: 'conflict' | 'challenged' | 'respect'
+    system: string
+    deciders: string[]
+    reasons: string[]
+    drift_detected: boolean
+    matched_terms: string[]
+  }[]
+  draft: string
+}
