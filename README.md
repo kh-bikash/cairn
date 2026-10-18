@@ -34,11 +34,13 @@ that graph, with every claim linked to the message, ticket or document that supp
 | **Who knows this?** | Expertise per system from who built, reviewed, decided and explained it, recency-weighted, with the work that justifies the ranking. People who left are shown as such, not recommended. |
 | **What breaks?** | Transitive dependencies (`DEPENDS_ON*`), owning teams, open work and the decisions that constrain the change. |
 | **Where are we fragile?** | Bus factor per system, experts who left, bridge people (betweenness) and working groups (label propagation). |
+| **Questions that need several hops** | Chained graph walks that show their steps: decisions made by people who left → what they affect → what still depends on it; runbooks → authors → newer postmortems → challenged decisions; a topic → the repos and people involved → the earlier work it refers to. The UI shows each hop as a numbered "How this was worked out" trace. |
 
-Three workflows turn that into work people already do:
+Four workflows turn that into work people already do:
 
 - **Change impact.** "We're moving the events pipeline to MSK." Cairn returns the blast radius, the teams and people to tell, the past decisions you'd be overturning, and a heads-up issue draft.
 - **Incident memory.** Paste an alert. Cairn finds similar past incidents, how they were resolved, who fixed them, and flags runbooks that are stale (author left, older than the latest postmortem, or based on a decision that drifted).
+- **Decision guard.** A new PR or ticket arrives. Cairn maps it to the systems it touches, loads their active decisions, and says whether the change looks like it reverses one (needs review), relates to one (heads-up) or is clear, with the reasons and deciders and a draft comment. No AI involved, and it never @-mentions anyone.
 - **Handoff plan.** Someone is leaving. Cairn lists what only they know, their open work, the decisions they made, and who should take each area, as a handoff doc ready for a PR.
 
 Every write (an issue, a routing comment, a handoff doc, the OKF wiki) is a *proposal* until a human approves it.
@@ -424,8 +426,12 @@ retrieves from a FalkorDB vector index; both RAG baselines get the same prompt a
 What it shows: good vector retrieval ties Cairn on "why" questions, because the answer usually sits in one paragraph.
 On who knows what, what breaks, history and knowledge risk, the answer is an aggregate over relationships with no
 paragraph to retrieve, and vector RAG scores close to zero while the graph, even with no AI at all, answers them.
-Where Cairn still misses: multi-hop questions that chain several facts (1/4), and two "who" answers where its
+Where Cairn still missed in this run: multi-hop questions that chain several facts (1/4), and two "who" answers where its
 recency-weighted expertise disagrees with raw PR counts. Per-question results: [`eval/results.md`](eval/results.md).
+
+**After this run** we added the multi-hop chains above. Graph-only routing then scores **36/40** strict (multi-hop 4/4,
+no other question changed). Treat that as optimistic: the chains were built while looking at those four questions, and
+only the router row was re-measured, so the table above stays as the full four-system result.
 
 ## Use it from your AI tools (MCP)
 
