@@ -58,10 +58,12 @@ class IncidentRequest(BaseModel):
 class HandoffRequest(BaseModel):
     handle: str = Field(min_length=1, max_length=100)
 
+
 class GuardRequest(BaseModel):
     title: str = Field(min_length=3, max_length=300)
     body: str = Field(default="", max_length=6_000)
     files: list[str] = Field(default_factory=list, max_length=100)
+
 
 class SyncRequest(BaseModel):
     repos: list[str] = Field(min_length=1, max_length=10)

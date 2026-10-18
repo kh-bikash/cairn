@@ -29,6 +29,7 @@ from tests.fixtures import api_snapshot, client_snapshot
         ("Why did we move the events pipeline to MSK?", "why"),
         ("Who knows the payments service best?", "who"),
         ("What depends on the events pipeline?", "impact"),
+        ("Which services break if we migrate the events pipeline?", "change"),
         ("What knowledge did we lose when Priya left?", "risk"),
     ],
 )

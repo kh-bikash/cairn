@@ -52,3 +52,9 @@ def test_unrelated_change_stays_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_empty_change_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(ToolError):
         decision_guard(make_tools(monkeypatch), "   ")
+
+
+def test_words_that_only_name_the_system_do_not_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    # "events" is the system's own name, so it alone doesn't tie this change to the Kafka decision.
+    result = decision_guard(make_tools(monkeypatch), "Bump the font size on the events dashboard")
+    assert result.data["verdict"] == "clear"

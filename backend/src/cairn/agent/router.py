@@ -38,7 +38,8 @@ _INTENTS: list[tuple[str, re.Pattern[str]]] = [
     (
         "trace",
         re.compile(
-            r"\b(which|what) (?:of our )?(?:projects?|repos?|repositories|services)\b.*\b(adopt\w*|migrat\w*|implement\w*)\b"
+            # Past tense only: "which services break if we migrate X" is a change question.
+            r"\b(which|what) (?:of our )?(?:projects?|repos?|repositories|services)\b.*\b(adopted|migrated|implemented)\b"
             r"|\bwho drove\b|\bearlier (?:fix|change|pr|issue)\b",
             re.I,
         ),

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from cairn.agent.tools import Evidence, ToolError, ToolResult, Tools, _stem, _words, fmt_date
@@ -126,8 +127,6 @@ def change_impact(tools: Tools, system: str, change: str = "") -> ToolResult:
     return ToolResult(data, summary, sg, evidence)
 
 
-# --------------------------------------------------------------------------- incident memory
-
 # --------------------------------------------------------------------------- decision guard
 
 # Words that signal a change is undoing or replacing something, compared by stem.
@@ -150,6 +149,8 @@ def decision_guard(tools: Tools, title: str, body: str = "", files: list[str] | 
     findings: list[dict[str, Any]] = []
     seen: set[str] = set()
     for key in systems:
+        # Words that only name the system ("driver", "app") say nothing about whether a decision is involved.
+        system_words = _stems(re.sub(r"[:/_-]", " ", key))
         rows = tools.store.records(
             "MATCH (d:Decision)-[:AFFECTS]->(:System {key: $k}) WHERE coalesce(d.status, 'active') <> 'superseded' RETURN d.uid AS uid ORDER BY d.ts DESC LIMIT 6",
             {"k": key},
@@ -163,7 +164,7 @@ def decision_guard(tools: Tools, title: str, body: str = "", files: list[str] | 
                 continue
             reasons = [p["claim"] for p in detail["premises"][:3]]
             topic = _stems(" ".join([detail["title"], detail.get("summary") or "", *reasons]))
-            overlap = sorted(change_stems & topic)
+            overlap = sorted((change_stems & topic) - system_words)
             drifted = bool(detail["drift_detected"])
             # Relevant only when the change really talks about the same thing; this keeps the guard quiet otherwise.
             if len(overlap) < 2 and not (drifted and overlap):
@@ -197,6 +198,9 @@ def decision_guard(tools: Tools, title: str, body: str = "", files: list[str] | 
     data = {"title": title, "systems": systems, "verdict": verdict, "reverses": reverses, "findings": findings, "draft": "\n".join(lines)}
     summary = f"{verdict.replace('_', ' ')}: {_n(len(findings), 'decision')} flagged across {_n(len(systems), 'system')}"
     return ToolResult(data, summary, sg, evidence)
+
+
+# --------------------------------------------------------------------------- incident memory
 
 
 def incident_memory(tools: Tools, description: str, limit: int = 5) -> ToolResult:
