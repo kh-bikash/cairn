@@ -152,10 +152,10 @@ sequenceDiagram
     participant R as Router
     participant T as Graph tools
     participant G as FalkorDB
-    participant L as LLM (Groq / Gemini)
+    participant L as LLM (free model chain)
     U->>W: Why did we move the events pipeline to MSK?
     W->>A: POST /api/ask (streamed)
-    A->>R: classify: why, who, impact, incident, change or handoff
+    A->>R: classify: why, who, impact, incident, change, handoff or multi-hop
     R->>T: why(events pipeline MSK)
     T->>G: full-text search, then BECAUSE and EVIDENCED_BY traversal
     G-->>T: decision, reasons, verbatim quotes, sources
@@ -464,7 +464,7 @@ flowchart LR
         C["Caddy :443<br/>automatic HTTPS"] --> API["Cairn API<br/>FastAPI, streamed answers"]
         API --> DB[("FalkorDB<br/>not exposed")]
     end
-    API --> LLM["Groq / Gemini"]
+    API --> LLM["Free models<br/>Groq, Cloudflare, NVIDIA,<br/>Gemini, OpenRouter"]
     S3[("S3 release bucket")] -.->|"deploy.sh via SSM, no SSH"| EC2
 ```
 
